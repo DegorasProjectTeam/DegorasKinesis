@@ -89,7 +89,8 @@ set(THORLABS_KINESIS_APPS
     AppPollerWaitTesting
     AppDCServoPureTesting
     AppDCServoMappingTesting
-    AppM30XYSimTesting)
+    AppM30XYSimTesting
+    AppM30XSimTesting)
 
 foreach(app ${THORLABS_KINESIS_APPS})
     add_executable(${app} ${CMAKE_CURRENT_SOURCE_DIR}/applications/${app}.cpp)

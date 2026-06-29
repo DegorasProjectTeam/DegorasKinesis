@@ -70,6 +70,7 @@ std::string toString(OperationResult r)
         case OperationResult::WORKER_NOT_RUNNING:      return "WORKER_NOT_RUNNING";
         case OperationResult::WORKER_START_ERROR:      return "WORKER_START_ERROR";
         case OperationResult::READ_FAILED:             return "READ_FAILED";
+        case OperationResult::INVALID_CHANNEL:         return "INVALID_CHANNEL";
     }
     return "UNKNOWN_OPERATION_RESULT";
 }

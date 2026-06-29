@@ -38,7 +38,7 @@ void testOperationResultToStringIsTotalAndUnique()
         OperationResult::START_POLLING_ERROR,     OperationResult::OPERATION_TIMEOUT,
         OperationResult::THORLABS_INTERNAL_ERROR, OperationResult::WORKER_ALREADY_RUNNING,
         OperationResult::WORKER_NOT_RUNNING,      OperationResult::WORKER_START_ERROR,
-        OperationResult::READ_FAILED
+        OperationResult::READ_FAILED,             OperationResult::INVALID_CHANNEL
     };
 
     std::set<std::string> seen;

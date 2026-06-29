@@ -54,7 +54,8 @@ enum class OperationResult : std::uint8_t
     WORKER_ALREADY_RUNNING  = 9,   ///< The status-polling worker was already running.
     WORKER_NOT_RUNNING      = 10,  ///< The status-polling worker was not running.
     WORKER_START_ERROR      = 11,  ///< The status-polling worker thread could not be started.
-    READ_FAILED             = 12   ///< A cache read was stale or comms were lost; the value is NOT valid.
+    READ_FAILED             = 12,  ///< A cache read was stale or comms were lost; the value is NOT valid.
+    INVALID_CHANNEL         = 13   ///< The requested channel does not exist on this device.
 };
 
 /**
