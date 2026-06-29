@@ -72,11 +72,13 @@ target_compile_definitions(LibThorlabsKinesis PRIVATE LIBTHORLABSKINESIS_LIBRARY
 target_include_directories(LibThorlabsKinesis PUBLIC
                            ${CMAKE_CURRENT_SOURCE_DIR}/includes)
 
-# NOTE (milestone M4): the Layer-2 Benchtop.DCServo adapter is the only code that touches the vendor SDK.
-# The .lib link and the vendor include path are added here once dcservo_channel lands; Layer 1 has no vendor dependency.
-# target_include_directories(LibThorlabsKinesis PRIVATE ${THIRDPARTY_THORLABS}/includes)
-# target_link_libraries(LibThorlabsKinesis PRIVATE
-#    ${THIRDPARTY_THORLABS}/lib/Thorlabs.MotionControl.Benchtop.DCServo.lib)
+# The vendor SDK is included ONLY by Layer-2 translation units (PRIVATE), so consumers never see the Thorlabs
+# header. The Benchtop.DCServo import library is linked into the shared library; its runtime DLLs are staged above.
+target_include_directories(LibThorlabsKinesis PRIVATE
+                           ${THIRDPARTY_THORLABS}/includes)
+
+target_link_libraries(LibThorlabsKinesis PRIVATE
+   ${THIRDPARTY_THORLABS}/lib/Thorlabs.MotionControl.Benchtop.DCServo.lib)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # SETUP APPLICATIONS
@@ -85,7 +87,8 @@ target_include_directories(LibThorlabsKinesis PUBLIC
 set(THORLABS_KINESIS_APPS
     AppErrorMappingTesting
     AppPollerWaitTesting
-    AppDCServoPureTesting)
+    AppDCServoPureTesting
+    AppDCServoMappingTesting)
 
 foreach(app ${THORLABS_KINESIS_APPS})
     add_executable(${app} ${CMAKE_CURRENT_SOURCE_DIR}/applications/${app}.cpp)
