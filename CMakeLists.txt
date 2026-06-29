@@ -84,7 +84,8 @@ target_include_directories(LibThorlabsKinesis PUBLIC
 # Each application is one self-contained main(): examples and assert()-based, no-hardware self-checks.
 set(THORLABS_KINESIS_APPS
     AppErrorMappingTesting
-    AppPollerWaitTesting)
+    AppPollerWaitTesting
+    AppDCServoPureTesting)
 
 foreach(app ${THORLABS_KINESIS_APPS})
     add_executable(${app} ${CMAKE_CURRENT_SOURCE_DIR}/applications/${app}.cpp)

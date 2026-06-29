@@ -1,0 +1,53 @@
+/*
+ *  Copyright (C) 2018-2026 Degoras Project Team
+ *
+ *  This file is part of a small-scale research or utility tool built atop
+ *  the Degoras Project infrastructure, released under the MIT License.
+ *
+ *  SPDX-License-Identifier: MIT
+ *
+ *  See the LICENSE file in the root directory for full license details.
+ */
+
+#pragma once
+
+// C++ INCLUDES
+#include <mutex>
+#include <string>
+
+// PROJECT INCLUDES
+#include "libthorlabskinesis_global.h"
+
+
+// NAMESPACES
+namespace thorlabs
+{
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * @brief Process-wide mutex serialising the global Kinesis discovery / simulator calls (TLI_*).
+ * @return Reference to the single discovery mutex.
+ * @note The Kinesis device-list build/query and the simulator init/uninit are process-global and must never run
+ *       concurrently with each other or with a connect. Per-device operations use serialMtx() instead, so device
+ *       I/O on distinct serials is NOT serialised against each other.
+ */
+LIBTHORLABSKINESIS_EXPORT std::mutex& discoveryMtx();
+
+/**
+ * @brief Per-serial mutex serialising calls that target a single device.
+ * @param serial The device serial number the caller is about to act on.
+ * @return Reference to the mutex dedicated to @p serial (stable for the process lifetime).
+ * @note Two different serials get two different mutexes, so independent devices can be driven concurrently.
+ *       The returned reference is stable: registry entries are never moved or erased while the process runs.
+ * @warning This assumes the Kinesis BDC_* API is thread-safe across distinct serials. If that assumption is
+ *          disproved (milestone M-VAL), make this return a single shared mutex instead; call sites do not change
+ *          because the lock is reached through this function rather than held as a member.
+ */
+LIBTHORLABSKINESIS_EXPORT std::mutex& serialMtx(const std::string& serial);
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+} // END NAMESPACES
+
+// ---------------------------------------------------------------------------------------------------------------------
