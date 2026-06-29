@@ -128,7 +128,17 @@ DeviceError DCServoChannel::startPolling(int rate_ms)
 
 void DCServoChannel::stopPolling() noexcept
 {
-    const std::lock_guard<std::mutex> lock(serialMtx(this->serial_));
+    // Teardown-only and best-effort. If a detached, wedged worker still holds serialMtx (blocked in a BDC call on
+    // dead hardware), do not block shutdown forever: bound the wait and skip if it cannot be acquired.
+    std::unique_lock<std::mutex> lock(serialMtx(this->serial_), std::defer_lock);
+    const std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+    while (!lock.try_lock())
+    {
+        if (std::chrono::steady_clock::now() >= deadline)
+            return;
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
     BDC_StopPolling(this->serial_.c_str(), toType(this->channel_));
 }
 

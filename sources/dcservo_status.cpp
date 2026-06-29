@@ -9,6 +9,9 @@
  *  See the LICENSE file in the root directory for full license details.
  */
 
+// C++ INCLUDES
+#include <sstream>
+
 // PROJECT INCLUDES
 #include "dcservo_status.h"
 
@@ -68,6 +71,38 @@ DCServoStatusFlags decodeDCServoStatus(const std::bitset<32>& bits)
         f.digital_in[i] = (raw & kDigitalIn[i]) != 0;
 
     return f;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+std::string DCServoStatusFlags::toJsonStr() const
+{
+    const auto b = [](bool v) { return v ? "true" : "false"; };
+
+    std::ostringstream ss;
+    ss << "{"
+       << "\"limit_cw\": " << b(this->limit_cw) << ","
+       << "\"limit_ccw\": " << b(this->limit_ccw) << ","
+       << "\"sw_limit_cw\": " << b(this->sw_limit_cw) << ","
+       << "\"sw_limit_ccw\": " << b(this->sw_limit_ccw) << ","
+       << "\"moving_cw\": " << b(this->moving_cw) << ","
+       << "\"moving_ccw\": " << b(this->moving_ccw) << ","
+       << "\"jogging_cw\": " << b(this->jogging_cw) << ","
+       << "\"jogging_ccw\": " << b(this->jogging_ccw) << ","
+       << "\"motor_connected\": " << b(this->motor_connected) << ","
+       << "\"homing\": " << b(this->homing) << ","
+       << "\"homed\": " << b(this->homed) << ","
+       << "\"active\": " << b(this->active) << ","
+       << "\"enabled\": " << b(this->enabled) << ","
+       << "\"digital_in\": [";
+    for (std::size_t i = 0; i < this->digital_in.size(); ++i)
+    {
+        ss << b(this->digital_in[i]);
+        if (i + 1 < this->digital_in.size())
+            ss << ",";
+    }
+    ss << "]}";
+    return ss.str();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

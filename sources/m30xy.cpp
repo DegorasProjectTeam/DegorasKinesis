@@ -1,0 +1,370 @@
+/*
+ *  Copyright (C) 2018-2026 Degoras Project Team
+ *
+ *  This file is part of a small-scale research or utility tool built atop
+ *  the Degoras Project infrastructure, released under the MIT License.
+ *
+ *  SPDX-License-Identifier: MIT
+ *
+ *  See the LICENSE file in the root directory for full license details.
+ */
+
+// C++ INCLUDES
+#include <bitset>
+#include <string>
+#include <utility>
+
+// PROJECT INCLUDES
+#include "m30xy.h"
+#include "dcservo_discovery.h"
+#include "wait_for.h"
+
+
+// NAMESPACES
+namespace thorlabs
+{
+
+using namespace thorlabs::types;
+
+namespace
+{
+constexpr int kM30XYThorlabsID = 101;   ///< Kinesis device type id for the M30XY.
+constexpr int kChannelCount = 2;        ///< X and Y.
+} // namespace
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+M30XY::M30XY(const std::string& serial_no) :
+    serial_no_(serial_no),
+    poll_rate_ms_(500),
+    chans_{ dcservo::DCServoChannel(serial_no, Channel::X_CHANNEL),
+            dcservo::DCServoChannel(serial_no, Channel::Y_CHANNEL) }
+{}
+
+M30XY::~M30XY()
+{
+    static_cast<void>(this->stopStatusPolling());
+    if (this->isConnected())
+        static_cast<void>(this->doDisconnect());
+}
+
+dcservo::DCServoChannel& M30XY::channelFor(Channel ch)
+{
+    return (ch == Channel::X_CHANNEL) ? this->chans_[0] : this->chans_[1];
+}
+
+// -- Identity / state -------------------------------------------------------------------------------------------------
+
+std::string M30XY::getSerialNo() const
+{
+    return this->serial_no_;
+}
+
+short M30XY::getChannelCount() const
+{
+    return kChannelCount;
+}
+
+bool M30XY::isConnected() const
+{
+    return this->chans_[0].isConnected();   // controller-level (channel-independent).
+}
+
+// -- Connection lifecycle ---------------------------------------------------------------------------------------------
+
+OperationResult M30XY::doConnect(const DeviceConfig& cfg)
+{
+    // Idempotent and short-circuited BEFORE enumeration: an already-open device disappears from the device list,
+    // so re-enumerating it would wrongly read DEVICE_NOT_FOUND.
+    if (this->isConnected())
+        return OperationResult::ALREADY_CONNECTED;
+
+    // Controller open (build device list + BDC_Open) on one channel; FT_DeviceNotFound -> DEVICE_NOT_FOUND.
+    DeviceError err = this->chans_[0].open();
+    if (!err.ok())
+        return err.category;
+
+    this->poll_rate_ms_ = cfg.poll_rate_ms;
+    const int freshness_ms = cfg.poll_rate_ms * 5;   // stale only after several missed polls.
+
+    // Partial-init cleanup (lambdas in a member function may touch private members through this).
+    const auto rollback = [this]()
+    {
+        this->chans_[0].stopPolling();
+        this->chans_[1].stopPolling();
+        this->chans_[0].close();
+    };
+
+    for (std::size_t i = 0; i < this->chans_.size(); ++i)
+    {
+        const std::string settings = (i < cfg.settings.size()) ? cfg.settings[i] : std::string();
+
+        err = this->chans_[i].loadSettings(settings);
+        if (!err.ok())
+        {
+            rollback();
+            return err.category;
+        }
+
+        err = this->chans_[i].startPolling(this->poll_rate_ms_);
+        if (!err.ok())
+        {
+            rollback();
+            return err.category;
+        }
+
+        this->chans_[i].enableFreshnessTimer(freshness_ms);
+        this->chans_[i].clearMessageQueue();
+    }
+
+    return OperationResult::OPERATION_OK;
+}
+
+OperationResult M30XY::doDisconnect()
+{
+    static_cast<void>(this->stopStatusPolling());
+
+    const bool was_connected = this->isConnected();
+    OperationResult first_error = OperationResult::OPERATION_OK;
+
+    if (was_connected)
+    {
+        const OperationResult stop_result = this->doStopAll(StopMode::PROFILED);
+        if (stop_result != OperationResult::OPERATION_OK)
+            first_error = stop_result;
+    }
+
+    // Best-effort teardown regardless of connection state: release the SDK's per-serial state (drop recovery).
+    this->chans_[0].stopPolling();
+    this->chans_[1].stopPolling();
+    const DeviceError close_err = this->chans_[0].close();
+    if (!close_err.ok() && first_error == OperationResult::OPERATION_OK)
+        first_error = close_err.category;
+
+    if (!was_connected && first_error == OperationResult::OPERATION_OK)
+        return OperationResult::NOT_CONNECTED;
+    return first_error;
+}
+
+// -- Motion -----------------------------------------------------------------------------------------------------------
+
+OperationResult M30XY::doEnable(Channel ch, bool enable)
+{
+    // Disabling frees the motor; stop it first (mirrors the proof of concept).
+    if (!enable)
+    {
+        const OperationResult stop_result = this->doStop(ch, StopMode::PROFILED);
+        if (stop_result != OperationResult::OPERATION_OK)
+            return stop_result;
+    }
+    return this->channelFor(ch).enable(enable).category;
+}
+
+OperationResult M30XY::doEnableChannels(bool enable)
+{
+    const OperationResult r = this->doEnable(Channel::X_CHANNEL, enable);
+    if (r != OperationResult::OPERATION_OK)
+        return r;
+    return this->doEnable(Channel::Y_CHANNEL, enable);
+}
+
+OperationResult M30XY::doHome(Channel ch)
+{
+    return this->channelFor(ch).home().category;
+}
+
+OperationResult M30XY::doHomeAll()
+{
+    const OperationResult r = this->doHome(Channel::X_CHANNEL);
+    if (r != OperationResult::OPERATION_OK)
+        return r;
+    return this->doHome(Channel::Y_CHANNEL);
+}
+
+OperationResult M30XY::doStop(Channel ch, StopMode mode)
+{
+    return this->channelFor(ch).stop(mode).category;
+}
+
+OperationResult M30XY::doStopAll(StopMode mode)
+{
+    const OperationResult r = this->doStop(Channel::X_CHANNEL, mode);
+    if (r != OperationResult::OPERATION_OK)
+        return r;
+    return this->doStop(Channel::Y_CHANNEL, mode);
+}
+
+OperationResult M30XY::doJog(Channel ch, TravelDirection direction)
+{
+    return this->channelFor(ch).jog(direction).category;
+}
+
+OperationResult M30XY::doMoveAbsolute(Channel ch, double pos_mm)
+{
+    dcservo::DCServoChannel& c = this->channelFor(ch);
+    int target_dev = 0;
+    const DeviceError conv = c.realToDevice(PhysicalUnit::DISTANCE, pos_mm, target_dev);
+    if (!conv.ok())
+        return conv.category;
+    return c.moveAbsolute(target_dev).category;
+}
+
+OperationResult M30XY::doMoveRelative(Channel ch, double pos_mm)
+{
+    dcservo::DCServoChannel& c = this->channelFor(ch);
+    int delta_dev = 0;
+    const DeviceError conv = c.realToDevice(PhysicalUnit::DISTANCE, pos_mm, delta_dev);
+    if (!conv.ok())
+        return conv.category;
+    return c.moveRelative(delta_dev).category;
+}
+
+OperationResult M30XY::doConfigureVelocity(Channel ch, const VelocityProfile& profile)
+{
+    return this->channelFor(ch).setVelocity(profile).category;
+}
+
+OperationResult M30XY::doConfigureJog(Channel ch, const JogParameters& params)
+{
+    return this->channelFor(ch).setJog(params).category;
+}
+
+// -- Reads ------------------------------------------------------------------------------------------------------------
+
+OperationResult M30XY::getChannelPosition(Channel ch, double& pos_mm)
+{
+    pos_mm = 0.0;
+    dcservo::DCServoChannel& c = this->channelFor(ch);
+
+    int pos_raw = 0;
+    DeviceError err = c.readPosition(pos_raw);
+    if (!err.ok())
+        return err.category;
+
+    err = c.deviceToReal(PhysicalUnit::DISTANCE, pos_raw, pos_mm);
+    return err.category;
+}
+
+OperationResult M30XY::getChannelFlags(Channel ch, dcservo::DCServoStatusFlags& flags)
+{
+    flags = dcservo::DCServoStatusFlags{};
+
+    std::bitset<32> bits;
+    const DeviceError err = this->channelFor(ch).readStatusBits(bits);
+    if (!err.ok())
+        return err.category;
+
+    flags = dcservo::decodeDCServoStatus(bits);
+    return OperationResult::OPERATION_OK;
+}
+
+OperationResult M30XY::getChannelStatus(Channel ch, M30XYChannelStatus& status)
+{
+    status = M30XYChannelStatus(ch);
+    dcservo::DCServoChannel& c = this->channelFor(ch);
+
+    std::bitset<32> bits;
+    DeviceError err = c.readStatusBits(bits);
+    if (!err.ok())
+        return err.category;   // status.valid stays false.
+
+    int pos_raw = 0;
+    err = c.readPosition(pos_raw);
+    if (!err.ok())
+        return err.category;
+
+    double pos_mm = 0.0;
+    err = c.deviceToReal(PhysicalUnit::DISTANCE, pos_raw, pos_mm);
+    if (!err.ok())
+        return err.category;
+
+    status.flags = dcservo::decodeDCServoStatus(bits);
+    status.pos_raw = pos_raw;
+    status.pos_mm = pos_mm;
+    status.valid = true;
+    return OperationResult::OPERATION_OK;
+}
+
+OperationResult M30XY::getDeviceStatus(M30XYDeviceStatus& status)
+{
+    status = M30XYDeviceStatus();
+    status.serial_no = this->serial_no_;
+    status.connected = this->isConnected();
+    if (!status.connected)
+        return OperationResult::NOT_CONNECTED;
+
+    const OperationResult rx = this->getChannelStatus(Channel::X_CHANNEL, status.chann_x);
+    if (rx != OperationResult::OPERATION_OK)
+        return rx;
+    return this->getChannelStatus(Channel::Y_CHANNEL, status.chann_y);
+}
+
+// -- Waits ------------------------------------------------------------------------------------------------------------
+
+OperationResult M30XY::waitForHomed(Channel ch, std::chrono::milliseconds timeout)
+{
+    return waitForCondition([this, ch]()
+    {
+        dcservo::DCServoStatusFlags flags;
+        return this->getChannelFlags(ch, flags) == OperationResult::OPERATION_OK && flags.homed && !flags.homing;
+    }, timeout);
+}
+
+OperationResult M30XY::waitForMoveFinished(Channel ch, std::chrono::milliseconds timeout)
+{
+    return waitForCondition([this, ch]()
+    {
+        dcservo::DCServoStatusFlags flags;
+        return this->getChannelFlags(ch, flags) == OperationResult::OPERATION_OK && !flags.isMoving();
+    }, timeout);
+}
+
+// -- Status polling ---------------------------------------------------------------------------------------------------
+
+OperationResult M30XY::setNewStatusCb(NewStatusCb cb)
+{
+    const std::lock_guard<std::mutex> lock(this->cb_mtx_);
+    this->cb_ = std::move(cb);
+    return OperationResult::OPERATION_OK;
+}
+
+OperationResult M30XY::startStatusPolling()
+{
+    auto producer = [this](M30XYDeviceStatus& status) { return this->getDeviceStatus(status); };
+
+    auto sink = [this](OperationResult result, const M30XYDeviceStatus& status)
+    {
+        NewStatusCb cb;
+        {
+            const std::lock_guard<std::mutex> lock(this->cb_mtx_);
+            cb = this->cb_;
+        }
+        if (cb)
+            cb(result, status);
+    };
+
+    return this->poller_.start(producer, sink, std::chrono::milliseconds(this->poll_rate_ms_));
+}
+
+OperationResult M30XY::stopStatusPolling()
+{
+    return this->poller_.stop();
+}
+
+bool M30XY::isStatusPollingRunning() const
+{
+    return this->poller_.isRunning();
+}
+
+// -- Discovery --------------------------------------------------------------------------------------------------------
+
+OperationResult M30XY::getDeviceList(ThorlabsSNList& list)
+{
+    return dcservo::enumerateByTypeId(kM30XYThorlabsID, list);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+} // END NAMESPACES
+
+// ---------------------------------------------------------------------------------------------------------------------

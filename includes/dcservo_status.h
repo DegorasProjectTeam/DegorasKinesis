@@ -14,6 +14,7 @@
 // C++ INCLUDES
 #include <array>
 #include <bitset>
+#include <string>
 
 // PROJECT INCLUDES
 #include "libthorlabskinesis_global.h"
@@ -54,6 +55,9 @@ struct LIBTHORLABSKINESIS_EXPORT DCServoStatusFlags
 
     /// @brief True if the shaft is jogging in either direction.
     bool isJogging() const { return this->jogging_cw || this->jogging_ccw; }
+
+    /// @brief Serialise the flags and digital inputs to a JSON object string.
+    std::string toJsonStr() const;
 };
 
 /**
