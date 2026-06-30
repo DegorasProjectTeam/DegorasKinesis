@@ -26,6 +26,7 @@
 
 // PROJECT INCLUDES
 #include "LibThorlabsKinesis/Common/common_types.h"
+#include "LibThorlabsKinesis/Common/json_utils.h"
 
 
 // NAMESPACES
@@ -103,7 +104,7 @@ JogParameters::JogParameters() :
     stop_mode(StopMode::UNDEFINED)
 {}
 
-std::string JogParameters::toJsonStr() const
+std::string JogParameters::toJsonStr(bool pretty) const
 {
     std::ostringstream ss;
     ss << "{";
@@ -116,7 +117,20 @@ std::string JogParameters::toJsonStr() const
     ss << "},";
     ss << "\"stop_mode\": " << static_cast<int>(this->stop_mode);
     ss << "}";
-    return ss.str();
+    return pretty ? json::prettify(ss.str()) : ss.str();
+}
+
+JogParameters JogParameters::fromJsonStr(const std::string& json_str)
+{
+    JogParameters params;
+    params.mode = static_cast<JogMode>(json::getInt(json_str, "mode", static_cast<int>(JogMode::UNDEFINED)));
+    params.step_size = json::getDouble(json_str, "step_size");
+    const std::string vel = json::getObject(json_str, "vel_profile");
+    params.vel_profile.min = json::getDouble(vel, "min");
+    params.vel_profile.acc = json::getDouble(vel, "acc");
+    params.vel_profile.max = json::getDouble(vel, "max");
+    params.stop_mode = static_cast<StopMode>(json::getInt(json_str, "stop_mode", static_cast<int>(StopMode::UNDEFINED)));
+    return params;
 }
 
 std::string DeviceError::toString() const

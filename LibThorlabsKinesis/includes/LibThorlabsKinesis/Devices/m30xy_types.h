@@ -46,8 +46,11 @@ struct LIBTHORLABSKINESIS_EXPORT M30XYChannelStatus
     M30XYChannelStatus();
     explicit M30XYChannelStatus(Channel ch);
 
-    /// @brief Serialise to a JSON object string.
-    std::string toJsonStr() const;
+    /// @brief Serialise to a JSON object string (pretty-printed when @p pretty is true).
+    std::string toJsonStr(bool pretty = false) const;
+
+    /// @brief Parse from a JSON string produced by toJsonStr(); missing fields keep their defaults.
+    static M30XYChannelStatus fromJsonStr(const std::string& json);
 
     Channel channel;                     ///< Axis this status describes.
     bool valid;                          ///< false => read failed (READ_FAILED); other fields are not meaningful.
@@ -61,8 +64,11 @@ struct LIBTHORLABSKINESIS_EXPORT M30XYDeviceStatus
 {
     M30XYDeviceStatus();
 
-    /// @brief Serialise to a JSON object string.
-    std::string toJsonStr() const;
+    /// @brief Serialise to a JSON object string (pretty-printed when @p pretty is true).
+    std::string toJsonStr(bool pretty = false) const;
+
+    /// @brief Parse from a JSON string produced by toJsonStr(); missing fields keep their defaults.
+    static M30XYDeviceStatus fromJsonStr(const std::string& json);
 
     std::string serial_no;        ///< Controller serial number.
     bool connected;               ///< Whether the device was connected when the status was taken.

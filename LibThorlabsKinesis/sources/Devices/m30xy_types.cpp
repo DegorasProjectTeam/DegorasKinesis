@@ -26,6 +26,7 @@
 
 // PROJECT INCLUDES
 #include "LibThorlabsKinesis/Devices/m30xy_types.h"
+#include "LibThorlabsKinesis/Common/json_utils.h"
 
 
 // NAMESPACES
@@ -50,7 +51,7 @@ M30XYChannelStatus::M30XYChannelStatus(Channel ch) :
     this->channel = ch;
 }
 
-std::string M30XYChannelStatus::toJsonStr() const
+std::string M30XYChannelStatus::toJsonStr(bool pretty) const
 {
     std::ostringstream ss;
     ss << "{"
@@ -60,7 +61,18 @@ std::string M30XYChannelStatus::toJsonStr() const
        << "\"pos_mm\": " << this->pos_mm << ","
        << "\"flags\": " << this->flags.toJsonStr()
        << "}";
-    return ss.str();
+    return pretty ? json::prettify(ss.str()) : ss.str();
+}
+
+M30XYChannelStatus M30XYChannelStatus::fromJsonStr(const std::string& json_str)
+{
+    M30XYChannelStatus status;
+    status.channel = static_cast<Channel>(json::getInt(json_str, "channel", static_cast<int>(Channel::X_CHANNEL)));
+    status.valid = json::getBool(json_str, "valid");
+    status.pos_raw = json::getInt(json_str, "pos_raw");
+    status.pos_mm = json::getDouble(json_str, "pos_mm");
+    status.flags = dcservo::DCServoStatusFlags::fromJsonStr(json::getObject(json_str, "flags"));
+    return status;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -72,7 +84,7 @@ M30XYDeviceStatus::M30XYDeviceStatus() :
     chann_y(Channel::Y_CHANNEL)
 {}
 
-std::string M30XYDeviceStatus::toJsonStr() const
+std::string M30XYDeviceStatus::toJsonStr(bool pretty) const
 {
     std::ostringstream ss;
     ss << "{"
@@ -81,7 +93,17 @@ std::string M30XYDeviceStatus::toJsonStr() const
        << "\"chann_x\": " << this->chann_x.toJsonStr() << ","
        << "\"chann_y\": " << this->chann_y.toJsonStr()
        << "}";
-    return ss.str();
+    return pretty ? json::prettify(ss.str()) : ss.str();
+}
+
+M30XYDeviceStatus M30XYDeviceStatus::fromJsonStr(const std::string& json_str)
+{
+    M30XYDeviceStatus status;
+    status.serial_no = json::getString(json_str, "serial_no");
+    status.connected = json::getBool(json_str, "connected");
+    status.chann_x = M30XYChannelStatus::fromJsonStr(json::getObject(json_str, "chann_x"));
+    status.chann_y = M30XYChannelStatus::fromJsonStr(json::getObject(json_str, "chann_y"));
+    return status;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

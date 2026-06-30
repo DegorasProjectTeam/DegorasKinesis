@@ -45,8 +45,11 @@ struct LIBTHORLABSKINESIS_EXPORT M30XChannelStatus
 {
     M30XChannelStatus();
 
-    /// @brief Serialise to a JSON object string.
-    std::string toJsonStr() const;
+    /// @brief Serialise to a JSON object string (pretty-printed when @p pretty is true).
+    std::string toJsonStr(bool pretty = false) const;
+
+    /// @brief Parse from a JSON string produced by toJsonStr(); missing fields keep their defaults.
+    static M30XChannelStatus fromJsonStr(const std::string& json);
 
     bool valid;                          ///< false => read failed (READ_FAILED); other fields are not meaningful.
     dcservo::DCServoStatusFlags flags;   ///< Decoded DC Servo status flags.
@@ -59,8 +62,11 @@ struct LIBTHORLABSKINESIS_EXPORT M30XDeviceStatus
 {
     M30XDeviceStatus();
 
-    /// @brief Serialise to a JSON object string.
-    std::string toJsonStr() const;
+    /// @brief Serialise to a JSON object string (pretty-printed when @p pretty is true).
+    std::string toJsonStr(bool pretty = false) const;
+
+    /// @brief Parse from a JSON string produced by toJsonStr(); missing fields keep their defaults.
+    static M30XDeviceStatus fromJsonStr(const std::string& json);
 
     std::string serial_no;       ///< Controller serial number.
     bool connected;              ///< Whether the device was connected when the status was taken.

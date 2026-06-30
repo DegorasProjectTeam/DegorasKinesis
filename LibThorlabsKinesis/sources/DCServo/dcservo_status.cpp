@@ -23,9 +23,11 @@
 
 // C++ INCLUDES
 #include <sstream>
+#include <vector>
 
 // PROJECT INCLUDES
 #include "LibThorlabsKinesis/DCServo/dcservo_status.h"
+#include "LibThorlabsKinesis/Common/json_utils.h"
 
 
 // NAMESPACES
@@ -87,7 +89,7 @@ DCServoStatusFlags decodeDCServoStatus(const std::bitset<32>& bits)
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-std::string DCServoStatusFlags::toJsonStr() const
+std::string DCServoStatusFlags::toJsonStr(bool pretty) const
 {
     const auto b = [](bool v) { return v ? "true" : "false"; };
 
@@ -114,7 +116,31 @@ std::string DCServoStatusFlags::toJsonStr() const
             ss << ",";
     }
     ss << "]}";
-    return ss.str();
+    return pretty ? json::prettify(ss.str()) : ss.str();
+}
+
+DCServoStatusFlags DCServoStatusFlags::fromJsonStr(const std::string& json_str)
+{
+    DCServoStatusFlags f;
+    f.limit_cw        = json::getBool(json_str, "limit_cw");
+    f.limit_ccw       = json::getBool(json_str, "limit_ccw");
+    f.sw_limit_cw     = json::getBool(json_str, "sw_limit_cw");
+    f.sw_limit_ccw    = json::getBool(json_str, "sw_limit_ccw");
+    f.moving_cw       = json::getBool(json_str, "moving_cw");
+    f.moving_ccw      = json::getBool(json_str, "moving_ccw");
+    f.jogging_cw      = json::getBool(json_str, "jogging_cw");
+    f.jogging_ccw     = json::getBool(json_str, "jogging_ccw");
+    f.motor_connected = json::getBool(json_str, "motor_connected");
+    f.homing          = json::getBool(json_str, "homing");
+    f.homed           = json::getBool(json_str, "homed");
+    f.active          = json::getBool(json_str, "active");
+    f.enabled         = json::getBool(json_str, "enabled");
+
+    const std::vector<bool> din = json::getBoolArray(json_str, "digital_in");
+    for (std::size_t i = 0; i < f.digital_in.size(); ++i)
+        f.digital_in[i] = (i < din.size()) ? din[i] : false;
+
+    return f;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

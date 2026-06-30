@@ -26,6 +26,7 @@
 
 // PROJECT INCLUDES
 #include "LibThorlabsKinesis/Devices/m30x_types.h"
+#include "LibThorlabsKinesis/Common/json_utils.h"
 
 
 // NAMESPACES
@@ -43,7 +44,7 @@ M30XChannelStatus::M30XChannelStatus() :
     pos_mm(0.0)
 {}
 
-std::string M30XChannelStatus::toJsonStr() const
+std::string M30XChannelStatus::toJsonStr(bool pretty) const
 {
     std::ostringstream ss;
     ss << "{"
@@ -52,7 +53,17 @@ std::string M30XChannelStatus::toJsonStr() const
        << "\"pos_mm\": " << this->pos_mm << ","
        << "\"flags\": " << this->flags.toJsonStr()
        << "}";
-    return ss.str();
+    return pretty ? json::prettify(ss.str()) : ss.str();
+}
+
+M30XChannelStatus M30XChannelStatus::fromJsonStr(const std::string& json_str)
+{
+    M30XChannelStatus status;
+    status.valid = json::getBool(json_str, "valid");
+    status.pos_raw = json::getInt(json_str, "pos_raw");
+    status.pos_mm = json::getDouble(json_str, "pos_mm");
+    status.flags = dcservo::DCServoStatusFlags::fromJsonStr(json::getObject(json_str, "flags"));
+    return status;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -63,7 +74,7 @@ M30XDeviceStatus::M30XDeviceStatus() :
     chann()
 {}
 
-std::string M30XDeviceStatus::toJsonStr() const
+std::string M30XDeviceStatus::toJsonStr(bool pretty) const
 {
     std::ostringstream ss;
     ss << "{"
@@ -71,7 +82,16 @@ std::string M30XDeviceStatus::toJsonStr() const
        << "\"connected\": " << (this->connected ? "true" : "false") << ","
        << "\"chann\": " << this->chann.toJsonStr()
        << "}";
-    return ss.str();
+    return pretty ? json::prettify(ss.str()) : ss.str();
+}
+
+M30XDeviceStatus M30XDeviceStatus::fromJsonStr(const std::string& json_str)
+{
+    M30XDeviceStatus status;
+    status.serial_no = json::getString(json_str, "serial_no");
+    status.connected = json::getBool(json_str, "connected");
+    status.chann = M30XChannelStatus::fromJsonStr(json::getObject(json_str, "chann"));
+    return status;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

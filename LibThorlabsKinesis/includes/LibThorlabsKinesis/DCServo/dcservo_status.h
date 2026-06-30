@@ -68,8 +68,11 @@ struct LIBTHORLABSKINESIS_EXPORT DCServoStatusFlags
     /// @brief True if the shaft is jogging in either direction.
     bool isJogging() const { return this->jogging_cw || this->jogging_ccw; }
 
-    /// @brief Serialise the flags and digital inputs to a JSON object string.
-    std::string toJsonStr() const;
+    /// @brief Serialise the flags and digital inputs to a JSON object string (pretty-printed when @p pretty is true).
+    std::string toJsonStr(bool pretty = false) const;
+
+    /// @brief Parse flags from a JSON string produced by toJsonStr(); missing fields default to false.
+    static DCServoStatusFlags fromJsonStr(const std::string& json);
 };
 
 /**

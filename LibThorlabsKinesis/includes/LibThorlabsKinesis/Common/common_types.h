@@ -134,8 +134,11 @@ struct LIBTHORLABSKINESIS_EXPORT JogParameters
 {
     JogParameters();
 
-    /// @brief Serialise the parameters to a JSON string.
-    std::string toJsonStr() const;
+    /// @brief Serialise the parameters to a JSON string (pretty-printed when @p pretty is true).
+    std::string toJsonStr(bool pretty = false) const;
+
+    /// @brief Parse parameters from a JSON string produced by toJsonStr(); missing fields keep their defaults.
+    static JogParameters fromJsonStr(const std::string& json);
 
     JogMode mode;                  ///< Jogging mode.
     double step_size;              ///< Step size in millimetres (single-step mode only).
