@@ -25,17 +25,23 @@ personality — **by composition, never a shared base class** — reusing Layer 
 ```
 LibThorlabsKinesis/                       (this repo)
 ├── LICENSE  ├── README.md  ├── .gitignore
+├── build/<preset>/                       (out-of-tree build output; git-ignored)
 └── LibThorlabsKinesis/                   (CMake project root)
     ├── CMakeLists.txt  ├── CMakePresets.json  ├── CMakeUserPresets.json
     ├── cmake/toolchains/dp_windows_mingw.cmake
-    ├── includes/LibThorlabsKinesis/{Common,DCServo,Devices}/   + libthorlabskinesis_global.h
+    ├── includes/LibThorlabsKinesis/
+    │   ├── {Common,DCServo,Devices}/      + libthorlabskinesis_global.h
+    │   └── Modules/{Common,DCServo,Devices}   whole-layer aggregator headers
     ├── sources/{Common,DCServo,Devices}/
     ├── testing/{Common,DCServo,Devices}/      assert-based, no-framework self-checks
     ├── examples/                              consumer usage demos
     └── thirdparty/Thorlabs/                   vendored Kinesis SDK
 ```
 
-Public headers are consumed as `#include "LibThorlabsKinesis/<Layer>/<file>.h"`.
+Headers are consumed either individually as `#include "LibThorlabsKinesis/<Layer>/<file>.h"`, or a whole
+layer at once via a **module** aggregator: `#include <LibThorlabsKinesis/Modules/Devices>` (also `Common`,
+`DCServo`). Executable naming convention: examples `Example_*`, unit tests `UT_*`, other/integration tests
+`Test_*`, and applications `App*`.
 
 ## Build (Windows, MSYS2 MinGW)
 
@@ -53,13 +59,24 @@ Project presets (in `CMakePresets.json`) cover `mingw-{dynamic,static}-{deb,rel}
 `local-*` user presets just add your `MINGW_ROOT`. Build options:
 `LIBTHORLABSKINESIS_BUILD_SHARED` (default ON), `…_BUILD_TESTING`, `…_BUILD_EXAMPLES`.
 
-Artifacts (shared library + executables, with the vendored Thorlabs DLLs staged alongside)
-land in `build/<preset>/bin/`.
+Artifacts land in `build/<preset>/bin/` at the **repo root** (out of the project tree). The build also stages,
+next to the binaries, the vendored Thorlabs DLLs **and** the MinGW C++ runtime (`libstdc++-6.dll`,
+`libgcc_s_seh-1.dll`, `libwinpthread-1.dll`), so the executables run without the toolchain on `PATH`.
 
 ## Tests & examples
 
-No test-framework dependency: the `testing/` executables are plain `assert()`-based
-checks (run them directly). The pure/logic checks need no hardware; the device-level
-checks run against the **Thorlabs Kinesis Simulator** (and self-skip if it is absent).
-`AppM30XYHardwareTesting` is gated behind `--i-have-hardware` and performs only small,
-conservative moves — read its safety notice before running on real optics.
+No test-framework dependency: the `testing/` executables are plain `assert()`-based checks (run them
+directly). Unit tests (`UT_*`) need no hardware. Integration tests (`Test_*`) run against the **Thorlabs
+Kinesis Simulator** and self-skip if it is absent:
+
+- `Test_M30XYSim` / `Test_M30XSim` — full SDK round-trip (connect/enable/home/status/callback/disconnect).
+- `Test_Concurrency` — same-serial aliasing (`SERIAL_IN_USE`) + two-serial concurrent stress.
+- `Test_M30XYMonitor [seconds]` — connects and continuously prints decoded status while running a scripted
+  home / jog FWD-REV / move-relative / move-to sequence; you can also move the stage **manually** in the
+  simulator and watch it evolve. Observational (not an assert test).
+- `Test_M30XYHardware` — gated behind `--i-have-hardware`; small, conservative moves only. Read its safety
+  notice before running on real optics.
+
+The simulator exposes the devices and the full command/status path works, but it cannot be assigned a stage
+(travel range), so it does not physically translate position; the device tests therefore assert the SDK
+contract and only **log** position. Full physical-motion validation requires real hardware.

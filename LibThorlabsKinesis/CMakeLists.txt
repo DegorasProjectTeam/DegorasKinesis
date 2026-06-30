@@ -42,19 +42,30 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wpedantic -Wall -Wextra -O3")
 endif()
 
-# In MinGW, statically link libgcc, libstdc++, and pthread into the executables.
-if(MINGW)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
-endif()
+# The shared library and the executables share the DYNAMIC MinGW C++ runtime on purpose: the public API passes
+# std::string / std::vector / std::function across the DLL boundary, so a single libstdc++ instance must be used by
+# both sides. The runtime DLLs are staged next to the binaries below, so they run without the toolchain on PATH.
 
 # ----------------------------------------------------------------------------------------------------------------------
-# COPY THORLABS RUNTIME DLLS TO THE BUILD OUTPUT
+# STAGE RUNTIME DLLS NEXT TO THE BINARIES
 
+# Vendored Thorlabs Kinesis runtime.
 execute_process(
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${THIRDPARTY_THORLABS}/bin"
     "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
     RESULT_VARIABLE COPY_RESULT)
+
+# MinGW C++ runtime (resolved from the active compiler's bin directory) so binaries launch without MSYS2 on PATH.
+get_filename_component(MINGW_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+foreach(runtime_dll libstdc++-6.dll libgcc_s_seh-1.dll libwinpthread-1.dll)
+    if(EXISTS "${MINGW_BIN_DIR}/${runtime_dll}")
+        execute_process(
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${MINGW_BIN_DIR}/${runtime_dll}"
+            "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${runtime_dll}")
+    endif()
+endforeach()
 
 # ----------------------------------------------------------------------------------------------------------------------
 # SETUP LIBRARY
@@ -63,14 +74,19 @@ execute_process(
 file(GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/includes/*.h)
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/sources/*.cpp)
 
+# Module aggregator headers (extensionless) that re-export a whole layer, e.g. <LibThorlabsKinesis/Modules/Devices>.
+file(GLOB MODULES ${CMAKE_CURRENT_SOURCE_DIR}/includes/LibThorlabsKinesis/Modules/*)
+set_source_files_properties(${MODULES} PROPERTIES HEADER_FILE_ONLY ON)
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/includes PREFIX "Headers" FILES ${HEADERS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/sources  PREFIX "Sources" FILES ${SOURCES})
+source_group("Modules" FILES ${MODULES})
 
 # Shared or static, controlled by the option.
 if(LIBTHORLABSKINESIS_BUILD_SHARED)
-    add_library(LibThorlabsKinesis SHARED ${HEADERS} ${SOURCES})
+    add_library(LibThorlabsKinesis SHARED ${HEADERS} ${SOURCES} ${MODULES})
 else()
-    add_library(LibThorlabsKinesis STATIC ${HEADERS} ${SOURCES})
+    add_library(LibThorlabsKinesis STATIC ${HEADERS} ${SOURCES} ${MODULES})
     target_compile_definitions(LibThorlabsKinesis PUBLIC LIBTHORLABSKINESIS_STATIC)
 endif()
 

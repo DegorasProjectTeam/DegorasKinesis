@@ -21,17 +21,14 @@
  *  SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#pragma once
+// =====================================================================================================================
+// MODULE: Devices
+// Consumer-facing device personalities and the hardware-agnostic motion interface: IMotionDevice, the M30X (single
+// axis) and M30XY (dual axis) drivers and their status types. Include with: #include <LibThorlabsKinesis/Modules/Devices>
+// =====================================================================================================================
 
-// EXPORT
-// ---------------------------------------------------------------------------------------------------------------------
-#if ((defined __WIN32__) || (defined _WIN32)) && (!defined LIBTHORLABSKINESIS_STATIC)
-    #ifdef LIBTHORLABSKINESIS_LIBRARY
-        #define LIBTHORLABSKINESIS_EXPORT	__declspec(dllexport)
-    #else
-        #define LIBTHORLABSKINESIS_EXPORT	__declspec(dllimport)
-    #endif
-#else
-    # define LIBTHORLABSKINESIS_EXPORT
-#endif
-// ---------------------------------------------------------------------------------------------------------------------
+#include <LibThorlabsKinesis/Devices/i_motion_device.h>
+#include <LibThorlabsKinesis/Devices/m30x_types.h>
+#include <LibThorlabsKinesis/Devices/m30x.h>
+#include <LibThorlabsKinesis/Devices/m30xy_types.h>
+#include <LibThorlabsKinesis/Devices/m30xy.h>

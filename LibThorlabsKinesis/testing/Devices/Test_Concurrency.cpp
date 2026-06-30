@@ -1,7 +1,11 @@
 /*
  *  LibThorlabsKinesis - An extensible C++ library for controlling Thorlabs Kinesis motion devices.
  *
- *  Copyright (C) 2018-2026 Degoras Project Team
+ *  Developed as free software by and for the Spanish Navy Observatory SLR station (SFEL) in San Fernando.
+ *
+ *  Copyright (C) 2024-2026 Degoras Project Team
+ *                          < Ángel Vera Herrera, avera@roa.es - angelvh.engr@gmail.com >
+ *                          < Jesús Relinque Madroñal, jrelinque@roa.es >
  *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU General
  *  Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
@@ -90,7 +94,7 @@ int main()
     if (second.empty())
     {
         std::cout << "NOTE: only one distinct device present; cross-device concurrency not exercised.\n";
-        std::cout << "AppMValConcurrency: ALL CHECKS PASSED (aliasing)\n";
+        std::cout << "Test_Concurrency: ALL CHECKS PASSED (aliasing)\n";
         return 0;
     }
 
@@ -141,6 +145,6 @@ int main()
     chan_b.close();
     assert(dev_a.doDisconnect() == OperationResult::OPERATION_OK);
 
-    std::cout << "AppMValConcurrency: ALL CHECKS PASSED (aliasing + two-serial concurrency)" << std::endl;
+    std::cout << "Test_Concurrency: ALL CHECKS PASSED (aliasing + two-serial concurrency)" << std::endl;
     return 0;
 }

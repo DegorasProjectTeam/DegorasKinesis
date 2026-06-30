@@ -1,7 +1,11 @@
 /*
  *  LibThorlabsKinesis - An extensible C++ library for controlling Thorlabs Kinesis motion devices.
  *
- *  Copyright (C) 2018-2026 Degoras Project Team
+ *  Developed as free software by and for the Spanish Navy Observatory SLR station (SFEL) in San Fernando.
+ *
+ *  Copyright (C) 2024-2026 Degoras Project Team
+ *                          < Ángel Vera Herrera, avera@roa.es - angelvh.engr@gmail.com >
+ *                          < Jesús Relinque Madroñal, jrelinque@roa.es >
  *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU General
  *  Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
@@ -83,10 +87,9 @@ bool M30XY::isConnected() const
 
 OperationResult M30XY::doConnect(const DeviceConfig& cfg)
 {
-    // Idempotent and short-circuited BEFORE enumeration: an already-open device disappears from the device list,
-    // so re-enumerating it would wrongly read DEVICE_NOT_FOUND.
     // Same object reconnecting is idempotent (ALREADY_CONNECTED); a different object on an open serial gets
-    // SERIAL_IN_USE. Short-circuited BEFORE enumeration: an already-open device disappears from the device list.
+    // SERIAL_IN_USE. Short-circuited BEFORE enumeration: an already-open device disappears from the device list,
+    // so re-enumerating it would wrongly read DEVICE_NOT_FOUND.
     if (this->isConnected())
         return this->i_own_open_ ? OperationResult::ALREADY_CONNECTED : OperationResult::SERIAL_IN_USE;
 

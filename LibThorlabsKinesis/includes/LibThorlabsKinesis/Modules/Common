@@ -21,17 +21,13 @@
  *  SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#pragma once
+// =====================================================================================================================
+// MODULE: Common
+// Device- and SDK-agnostic foundation: result/error vocabulary, motion value types, the generic status poller and the
+// deadline-poll wait helper. Include with: #include <LibThorlabsKinesis/Modules/Common>
+// =====================================================================================================================
 
-// EXPORT
-// ---------------------------------------------------------------------------------------------------------------------
-#if ((defined __WIN32__) || (defined _WIN32)) && (!defined LIBTHORLABSKINESIS_STATIC)
-    #ifdef LIBTHORLABSKINESIS_LIBRARY
-        #define LIBTHORLABSKINESIS_EXPORT	__declspec(dllexport)
-    #else
-        #define LIBTHORLABSKINESIS_EXPORT	__declspec(dllimport)
-    #endif
-#else
-    # define LIBTHORLABSKINESIS_EXPORT
-#endif
-// ---------------------------------------------------------------------------------------------------------------------
+#include <LibThorlabsKinesis/libthorlabskinesis_global.h>
+#include <LibThorlabsKinesis/Common/common_types.h>
+#include <LibThorlabsKinesis/Common/status_poller.h>
+#include <LibThorlabsKinesis/Common/wait_for.h>

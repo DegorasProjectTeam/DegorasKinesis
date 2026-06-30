@@ -1,7 +1,11 @@
 /*
  *  LibThorlabsKinesis - An extensible C++ library for controlling Thorlabs Kinesis motion devices.
  *
- *  Copyright (C) 2018-2026 Degoras Project Team
+ *  Developed as free software by and for the Spanish Navy Observatory SLR station (SFEL) in San Fernando.
+ *
+ *  Copyright (C) 2024-2026 Degoras Project Team
+ *                          < Ángel Vera Herrera, avera@roa.es - angelvh.engr@gmail.com >
+ *                          < Jesús Relinque Madroñal, jrelinque@roa.es >
  *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU General
  *  Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
@@ -59,7 +63,7 @@ int main(int argc, char** argv)
     const bool authorised = (argc > 1 && std::string(argv[1]) == "--i-have-hardware");
     if (!authorised)
     {
-        std::cout << "AppM30XYHardwareTesting: refusing to move hardware without explicit authorisation.\n"
+        std::cout << "Test_M30XYHardware: refusing to move hardware without explicit authorisation.\n"
                      "Re-run with --i-have-hardware ONLY when a stage is connected and clear to move.\n";
         return 0;
     }
@@ -99,6 +103,6 @@ int main(int argc, char** argv)
             && require("waitForMoveFinished(X)", dev.waitForMoveFinished(Channel::X_CHANNEL, seconds(30)));
     }
 
-    std::cout << (good ? "AppM30XYHardwareTesting: PASSED" : "AppM30XYHardwareTesting: FAILED") << "\n";
+    std::cout << (good ? "Test_M30XYHardware: PASSED" : "Test_M30XYHardware: FAILED") << "\n";
     return good ? 0 : 1;
 }

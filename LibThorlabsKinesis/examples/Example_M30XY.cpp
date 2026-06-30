@@ -1,7 +1,11 @@
 /*
  *  LibThorlabsKinesis - An extensible C++ library for controlling Thorlabs Kinesis motion devices.
  *
- *  Copyright (C) 2018-2026 Degoras Project Team
+ *  Developed as free software by and for the Spanish Navy Observatory SLR station (SFEL) in San Fernando.
+ *
+ *  Copyright (C) 2024-2026 Degoras Project Team
+ *                          < Ángel Vera Herrera, avera@roa.es - angelvh.engr@gmail.com >
+ *                          < Jesús Relinque Madroñal, jrelinque@roa.es >
  *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU General
  *  Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
@@ -22,9 +26,9 @@
 #include <iostream>
 #include <string>
 
-// PROJECT INCLUDES
-#include "LibThorlabsKinesis/DCServo/kinesis_simulator.h"
-#include "LibThorlabsKinesis/Devices/m30xy.h"
+// PROJECT INCLUDES (whole-layer module aggregators)
+#include <LibThorlabsKinesis/Modules/DCServo>
+#include <LibThorlabsKinesis/Modules/Devices>
 
 
 // Idiomatic example of driving an M30XY through the public library API. Works against the Kinesis Simulator (a

@@ -1,7 +1,11 @@
 /*
  *  LibThorlabsKinesis - An extensible C++ library for controlling Thorlabs Kinesis motion devices.
  *
- *  Copyright (C) 2018-2026 Degoras Project Team
+ *  Developed as free software by and for the Spanish Navy Observatory SLR station (SFEL) in San Fernando.
+ *
+ *  Copyright (C) 2024-2026 Degoras Project Team
+ *                          < Ángel Vera Herrera, avera@roa.es - angelvh.engr@gmail.com >
+ *                          < Jesús Relinque Madroñal, jrelinque@roa.es >
  *
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU General
  *  Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
@@ -116,7 +120,7 @@ int main()
                      "      so settings-dependent operation (home/move/units) cannot be exercised here. Discovery,\n"
                      "      BDC_Open, channel validation and the single-axis driver are confirmed; the motion path is\n"
                      "      the same DCServoChannel validated live by AppM30XYSimTesting.\n";
-        std::cout << "AppM30XSimTesting: PASSED (motion skipped - sim M30X has no stage configured)" << std::endl;
+        std::cout << "Test_M30XSim: PASSED (motion skipped - sim M30X has no stage configured)" << std::endl;
         return 0;
     }
 
@@ -126,6 +130,6 @@ int main()
     assert(dev.doDisconnect() == OperationResult::OPERATION_OK);
     assert(!dev.isConnected());
 
-    std::cout << "AppM30XSimTesting: ALL CHECKS PASSED" << std::endl;
+    std::cout << "Test_M30XSim: ALL CHECKS PASSED" << std::endl;
     return 0;
 }

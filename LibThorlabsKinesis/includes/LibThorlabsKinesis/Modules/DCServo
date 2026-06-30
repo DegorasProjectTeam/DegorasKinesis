@@ -21,17 +21,15 @@
  *  SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#pragma once
+// =====================================================================================================================
+// MODULE: DCServo
+// Per-Kinesis-module adapter for the Benchtop DC Servo family: the global/per-serial lock registry, the simulator
+// session, the status-word decoder, the per-axis channel adapter and device discovery. This is the only layer that
+// touches the vendor SDK. Include with: #include <LibThorlabsKinesis/Modules/DCServo>
+// =====================================================================================================================
 
-// EXPORT
-// ---------------------------------------------------------------------------------------------------------------------
-#if ((defined __WIN32__) || (defined _WIN32)) && (!defined LIBTHORLABSKINESIS_STATIC)
-    #ifdef LIBTHORLABSKINESIS_LIBRARY
-        #define LIBTHORLABSKINESIS_EXPORT	__declspec(dllexport)
-    #else
-        #define LIBTHORLABSKINESIS_EXPORT	__declspec(dllimport)
-    #endif
-#else
-    # define LIBTHORLABSKINESIS_EXPORT
-#endif
-// ---------------------------------------------------------------------------------------------------------------------
+#include <LibThorlabsKinesis/DCServo/kinesis_api_lock.h>
+#include <LibThorlabsKinesis/DCServo/kinesis_simulator.h>
+#include <LibThorlabsKinesis/DCServo/dcservo_status.h>
+#include <LibThorlabsKinesis/DCServo/dcservo_channel.h>
+#include <LibThorlabsKinesis/DCServo/dcservo_discovery.h>
