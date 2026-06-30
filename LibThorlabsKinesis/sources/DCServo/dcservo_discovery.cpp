@@ -1,0 +1,98 @@
+/*
+ *  LibThorlabsKinesis - An extensible C++ library for controlling Thorlabs Kinesis motion devices.
+ *
+ *  Copyright (C) 2018-2026 Degoras Project Team
+ *
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU General
+ *  Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+ *  option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+ *  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ *  for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along with this program. If not, see
+ *  <https://www.gnu.org/licenses/>.
+ *
+ *  SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+// C++ INCLUDES
+#include <mutex>
+#include <windows.h>
+
+// THORLABS INCLUDES
+#include <Thorlabs/Thorlabs.MotionControl.Benchtop.DCServo.h>
+
+// PROJECT INCLUDES
+#include "LibThorlabsKinesis/DCServo/dcservo_discovery.h"
+#include "LibThorlabsKinesis/DCServo/kinesis_api_lock.h"
+
+
+// NAMESPACES
+namespace thorlabs
+{
+namespace dcservo
+{
+
+using namespace thorlabs::types;
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+OperationResult enumerateByTypeId(int type_id, ThorlabsSNList& list)
+{
+    list.clear();
+
+    // Discovery touches the process-global Kinesis device list: serialise it (fixes the PoC's lock-bypassing
+    // static getDeviceList).
+    const std::lock_guard<std::mutex> lock(discoveryMtx());
+
+    if (TLI_BuildDeviceList() != 0)
+        return OperationResult::THORLABS_INTERNAL_ERROR;
+
+    SAFEARRAY* arr = nullptr;
+    const short error = TLI_GetDeviceListByType(&arr, type_id);
+    if (error != 0 || arr == nullptr)
+    {
+        if (arr != nullptr)
+            SafeArrayDestroy(arr);
+        return OperationResult::THORLABS_INTERNAL_ERROR;
+    }
+
+    if (arr->cDims != 1 || arr->cbElements != sizeof(BSTR))
+    {
+        SafeArrayDestroy(arr);
+        return OperationResult::THORLABS_INTERNAL_ERROR;
+    }
+
+    LONG lower = 0;
+    LONG upper = -1;
+    SafeArrayGetLBound(arr, 1, &lower);
+    SafeArrayGetUBound(arr, 1, &upper);
+
+    for (LONG i = lower; i <= upper; ++i)
+    {
+        BSTR bstr_serial = nullptr;
+        const HRESULT hr = SafeArrayGetElement(arr, &i, &bstr_serial);
+        if (SUCCEEDED(hr) && bstr_serial != nullptr)
+        {
+            const int len = WideCharToMultiByte(CP_UTF8, 0, bstr_serial, -1, nullptr, 0, nullptr, nullptr);
+            if (len > 1)
+            {
+                std::string serial(static_cast<std::size_t>(len) - 1, '\0');
+                WideCharToMultiByte(CP_UTF8, 0, bstr_serial, -1, &serial[0], len - 1, nullptr, nullptr);
+                list.push_back(serial);
+            }
+            SysFreeString(bstr_serial);
+        }
+    }
+
+    SafeArrayDestroy(arr);
+    return OperationResult::OPERATION_OK;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+}} // END NAMESPACES
+
+// ---------------------------------------------------------------------------------------------------------------------
