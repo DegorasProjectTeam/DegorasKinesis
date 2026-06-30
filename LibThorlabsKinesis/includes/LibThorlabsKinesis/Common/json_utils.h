@@ -41,6 +41,19 @@ namespace json
 // supplied default), and assume the object shapes this library emits. They are not exported across the DLL boundary.
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * @warning JSON round-trip caveats, by design:
+ *  - Floating-point fields are serialised by the types at the default stream precision (~6 significant digits), so
+ *    high-precision values are NOT preserved exactly through toJsonStr() -> fromJsonStr(). Adequate for positions in
+ *    millimetres; if exact round-tripping of arbitrary doubles is ever required, raise the precision in the emitters.
+ *  - fromJsonStr() is tolerant and best-effort, NOT a validating parser: malformed input or a missing key yields the
+ *    field's default rather than an error. It is intended only to read back this library's own toJsonStr() output.
+ *
+ * @note These helpers are generic and project-agnostic. If JSON support is needed across the Degoras libraries, this
+ *       (together with the other generic Common infrastructure, e.g. StatusPoller and waitForCondition) is a candidate
+ *       to migrate into LibDegorasBase rather than be reimplemented per project.
+ */
+
 /// @brief Re-indent a compact JSON string into a human-readable (pretty) multi-line form.
 std::string prettify(const std::string& compact);
 

@@ -47,6 +47,7 @@ namespace thorlabs
  *         OperationResult::OPERATION_TIMEOUT.
  * @note Generic deadline-poll helper that replaces the per-device, copy-pasted waitForHoming* loops. It uses a
  *       steady clock, so it is unaffected by wall-clock adjustments. It does not throw.
+ * @note Generic, project-agnostic: candidate to migrate into LibDegorasBase if shared across the Degoras libraries.
  */
 template <class Pred>
 types::OperationResult waitForCondition(Pred pred,

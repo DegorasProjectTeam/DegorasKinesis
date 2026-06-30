@@ -62,6 +62,9 @@ namespace thorlabs
  *
  * @warning A detached, wedged worker leaks for the remainder of the process. This is bounded to genuinely stuck
  *          hardware and is deliberately preferred over a hanging shutdown.
+ *
+ * @note Generic, project-agnostic infrastructure: candidate to migrate into LibDegorasBase if shared across the
+ *       Degoras libraries, rather than reimplemented per project.
  */
 template <class StatusT>
 class StatusPoller
