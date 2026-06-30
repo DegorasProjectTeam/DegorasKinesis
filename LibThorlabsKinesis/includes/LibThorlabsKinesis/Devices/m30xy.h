@@ -112,6 +112,7 @@ private:
 
     std::string serial_no_;
     int poll_rate_ms_;
+    bool i_own_open_;                                  ///< True if THIS object opened the connection (vs aliasing it).
     std::array<dcservo::DCServoChannel, 2> chans_;     ///< [0] = X, [1] = Y.
     mutable std::mutex cb_mtx_;                        ///< Guards cb_.
     NewStatusCb cb_;                                   ///< Consumer status callback.

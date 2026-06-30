@@ -106,6 +106,7 @@ private:
 
     std::string serial_no_;
     int poll_rate_ms_;
+    bool i_own_open_;                                ///< True if THIS object opened the connection (vs aliasing it).
     dcservo::DCServoChannel chan_;
     mutable std::mutex cb_mtx_;
     NewStatusCb cb_;

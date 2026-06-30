@@ -45,6 +45,7 @@ constexpr int kChannelCount = 2;        ///< X and Y.
 M30XY::M30XY(const std::string& serial_no) :
     serial_no_(serial_no),
     poll_rate_ms_(500),
+    i_own_open_(false),
     chans_{ dcservo::DCServoChannel(serial_no, Channel::X_CHANNEL),
             dcservo::DCServoChannel(serial_no, Channel::Y_CHANNEL) }
 {}
@@ -84,8 +85,10 @@ OperationResult M30XY::doConnect(const DeviceConfig& cfg)
 {
     // Idempotent and short-circuited BEFORE enumeration: an already-open device disappears from the device list,
     // so re-enumerating it would wrongly read DEVICE_NOT_FOUND.
+    // Same object reconnecting is idempotent (ALREADY_CONNECTED); a different object on an open serial gets
+    // SERIAL_IN_USE. Short-circuited BEFORE enumeration: an already-open device disappears from the device list.
     if (this->isConnected())
-        return OperationResult::ALREADY_CONNECTED;
+        return this->i_own_open_ ? OperationResult::ALREADY_CONNECTED : OperationResult::SERIAL_IN_USE;
 
     // Controller open (build device list + BDC_Open) on one channel; FT_DeviceNotFound -> DEVICE_NOT_FOUND.
     DeviceError err = this->chans_[0].open();
@@ -125,6 +128,7 @@ OperationResult M30XY::doConnect(const DeviceConfig& cfg)
         this->chans_[i].clearMessageQueue();
     }
 
+    this->i_own_open_ = true;
     return OperationResult::OPERATION_OK;
 }
 
@@ -148,6 +152,8 @@ OperationResult M30XY::doDisconnect()
     const DeviceError close_err = this->chans_[0].close();
     if (!close_err.ok() && first_error == OperationResult::OPERATION_OK)
         first_error = close_err.category;
+
+    this->i_own_open_ = false;
 
     if (!was_connected && first_error == OperationResult::OPERATION_OK)
         return OperationResult::NOT_CONNECTED;

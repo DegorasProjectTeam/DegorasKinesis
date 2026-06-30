@@ -44,6 +44,7 @@ constexpr int kM30XThorlabsID = 105;   ///< Kinesis device type id for the M30X.
 M30X::M30X(const std::string& serial_no) :
     serial_no_(serial_no),
     poll_rate_ms_(500),
+    i_own_open_(false),
     chan_(serial_no, Channel::X_CHANNEL)
 {}
 
@@ -80,8 +81,9 @@ bool M30X::isConnected() const
 
 OperationResult M30X::doConnect(const DeviceConfig& cfg)
 {
+    // Same object reconnecting is idempotent; a different object on an open serial gets SERIAL_IN_USE.
     if (this->isConnected())
-        return OperationResult::ALREADY_CONNECTED;
+        return this->i_own_open_ ? OperationResult::ALREADY_CONNECTED : OperationResult::SERIAL_IN_USE;
 
     DeviceError err = this->chan_.open();
     if (!err.ok())
@@ -115,6 +117,7 @@ OperationResult M30X::doConnect(const DeviceConfig& cfg)
     this->chan_.enableFreshnessTimer(freshness_ms);
     this->chan_.clearMessageQueue();
 
+    this->i_own_open_ = true;
     return OperationResult::OPERATION_OK;
 }
 
@@ -136,6 +139,8 @@ OperationResult M30X::doDisconnect()
     const DeviceError close_err = this->chan_.close();
     if (!close_err.ok() && first_error == OperationResult::OPERATION_OK)
         first_error = close_err.category;
+
+    this->i_own_open_ = false;
 
     if (!was_connected && first_error == OperationResult::OPERATION_OK)
         return OperationResult::NOT_CONNECTED;
