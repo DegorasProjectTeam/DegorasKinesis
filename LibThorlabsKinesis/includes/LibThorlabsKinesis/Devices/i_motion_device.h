@@ -65,23 +65,54 @@ public:
 
     virtual ~IMotionDevice() = default;
 
+    /// @brief Serial number of the controller this object targets.
     virtual std::string getSerialNo() const = 0;
+
+    /// @brief Number of motion channels (axes) the device exposes.
     virtual short getChannelCount() const = 0;
+
+    /// @brief Whether the device currently has an open connection.
     virtual bool isConnected() const = 0;
 
+    /**
+     * @brief Open and initialise the device. Idempotent for the object that owns the connection.
+     * @param cfg Optional per-channel named settings and polling rate.
+     * @return OPERATION_OK on success; ALREADY_CONNECTED if this object already owns it; SERIAL_IN_USE if another
+     *         object holds it; DEVICE_NOT_FOUND / LOAD_SETTINGS_ERROR / START_POLLING_ERROR on failure.
+     */
     virtual types::OperationResult doConnect(const DeviceConfig& cfg = DeviceConfig{}) = 0;
+
+    /// @brief Stop, close and release the device. Returns NOT_CONNECTED if it was not connected.
     virtual types::OperationResult doDisconnect() = 0;
 
+    /// @brief Enable (energise) or disable a channel. Disabling stops the channel first.
     virtual types::OperationResult doEnable(types::Channel ch, bool enable) = 0;
+
+    /// @brief Begin homing a channel. Non-blocking; use a wait helper to block until homed.
     virtual types::OperationResult doHome(types::Channel ch) = 0;
+
+    /// @brief Stop a channel, immediately or using its deceleration profile.
     virtual types::OperationResult doStop(types::Channel ch, types::StopMode mode) = 0;
+
+    /// @brief Begin jogging a channel in the given direction (per its configured jog parameters).
     virtual types::OperationResult doJog(types::Channel ch, types::TravelDirection direction) = 0;
+
+    /// @brief Move a channel to an absolute position, in millimetres. Non-blocking.
     virtual types::OperationResult doMoveAbsolute(types::Channel ch, double pos_mm) = 0;
+
+    /// @brief Move a channel by a relative distance, in millimetres. Non-blocking.
     virtual types::OperationResult doMoveRelative(types::Channel ch, double pos_mm) = 0;
+
+    /// @brief Configure a channel's velocity profile (physical units).
     virtual types::OperationResult doConfigureVelocity(types::Channel ch, const types::VelocityProfile& profile) = 0;
+
+    /// @brief Configure a channel's jog parameters.
     virtual types::OperationResult doConfigureJog(types::Channel ch, const types::JogParameters& params) = 0;
 
+    /// @brief Read a channel's position, in millimetres. @return READ_FAILED if the cached value is stale.
     virtual types::OperationResult getChannelPosition(types::Channel ch, double& pos_mm) = 0;
+
+    /// @brief Read a channel's decoded status flags. @return READ_FAILED if the cached value is stale.
     virtual types::OperationResult getChannelFlags(types::Channel ch, dcservo::DCServoStatusFlags& flags) = 0;
 };
 

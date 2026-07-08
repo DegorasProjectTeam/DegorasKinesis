@@ -75,7 +75,9 @@ public:
     M30XY(M30XY&&) = delete;
     M30XY& operator=(M30XY&&) = delete;
 
-    // -- IMotionDevice --
+    /// @name IMotionDevice interface
+    /// Behaviour is documented on IMotionDevice; M30XY dispatches each call to the addressed channel (X or Y).
+    /// @{
     std::string getSerialNo() const override;
     short getChannelCount() const override;
     bool isConnected() const override;
@@ -91,23 +93,29 @@ public:
     types::OperationResult doConfigureJog(types::Channel ch, const types::JogParameters& params) override;
     types::OperationResult getChannelPosition(types::Channel ch, double& pos_mm) override;
     types::OperationResult getChannelFlags(types::Channel ch, dcservo::DCServoStatusFlags& flags) override;
+    /// @}
 
     // -- Dual-axis conveniences (fan-out / aggregation; not on the interface) --
     types::OperationResult doEnableChannels(bool enable);   ///< Enable/disable both axes (first-error-wins).
     types::OperationResult doHomeAll();                     ///< Home both axes (first-error-wins).
     types::OperationResult doStopAll(types::StopMode mode); ///< Stop both axes (first-error-wins).
+
+    /// @brief Read the full decoded status of one axis.
     types::OperationResult getChannelStatus(types::Channel ch, types::M30XYChannelStatus& status);
+    /// @brief Read the aggregate status of both axes.
     types::OperationResult getDeviceStatus(types::M30XYDeviceStatus& status);
+    /// @brief Block until the axis reports homed, or @p timeout elapses (OPERATION_TIMEOUT).
     types::OperationResult waitForHomed(types::Channel ch, std::chrono::milliseconds timeout);
+    /// @brief Block until the axis stops moving, or @p timeout elapses (OPERATION_TIMEOUT).
     types::OperationResult waitForMoveFinished(types::Channel ch, std::chrono::milliseconds timeout);
 
-    /// @warning A registered callback only fires while startStatusPolling() is active.
+    /// @brief Register the status callback. @warning It only fires while startStatusPolling() is active.
     types::OperationResult setNewStatusCb(NewStatusCb cb);
-    types::OperationResult startStatusPolling();
-    types::OperationResult stopStatusPolling();
-    bool isStatusPollingRunning() const;
+    types::OperationResult startStatusPolling();   ///< Start the background worker that drives the status callback.
+    types::OperationResult stopStatusPolling();    ///< Stop the background status worker (bounded; never blocks).
+    bool isStatusPollingRunning() const;           ///< Whether the status worker is currently running.
 
-    /// @brief Enumerate connected M30XY controller serial numbers.
+    /// @brief Enumerate the serial numbers of connected M30XY controllers.
     static types::OperationResult getDeviceList(types::ThorlabsSNList& list);
 
 private:

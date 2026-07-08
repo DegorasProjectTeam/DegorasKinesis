@@ -71,7 +71,10 @@ public:
     M30X(M30X&&) = delete;
     M30X& operator=(M30X&&) = delete;
 
-    // -- IMotionDevice --
+    /// @name IMotionDevice interface
+    /// Behaviour is documented on IMotionDevice. This single-axis device accepts only Channel::X_CHANNEL; any
+    /// other channel returns OperationResult::INVALID_CHANNEL.
+    /// @{
     std::string getSerialNo() const override;
     short getChannelCount() const override;
     bool isConnected() const override;
@@ -87,19 +90,23 @@ public:
     types::OperationResult doConfigureJog(types::Channel ch, const types::JogParameters& params) override;
     types::OperationResult getChannelPosition(types::Channel ch, double& pos_mm) override;
     types::OperationResult getChannelFlags(types::Channel ch, dcservo::DCServoStatusFlags& flags) override;
+    /// @}
 
     // -- Conveniences --
+    /// @brief Read the device status (its single axis).
     types::OperationResult getDeviceStatus(types::M30XDeviceStatus& status);
+    /// @brief Block until the axis reports homed, or @p timeout elapses (OPERATION_TIMEOUT).
     types::OperationResult waitForHomed(std::chrono::milliseconds timeout);
+    /// @brief Block until the axis stops moving, or @p timeout elapses (OPERATION_TIMEOUT).
     types::OperationResult waitForMoveFinished(std::chrono::milliseconds timeout);
 
-    /// @warning A registered callback only fires while startStatusPolling() is active.
+    /// @brief Register the status callback. @warning It only fires while startStatusPolling() is active.
     types::OperationResult setNewStatusCb(NewStatusCb cb);
-    types::OperationResult startStatusPolling();
-    types::OperationResult stopStatusPolling();
-    bool isStatusPollingRunning() const;
+    types::OperationResult startStatusPolling();   ///< Start the background worker that drives the status callback.
+    types::OperationResult stopStatusPolling();    ///< Stop the background status worker (bounded; never blocks).
+    bool isStatusPollingRunning() const;           ///< Whether the status worker is currently running.
 
-    /// @brief Enumerate connected M30X controller serial numbers.
+    /// @brief Enumerate the serial numbers of connected M30X controllers.
     static types::OperationResult getDeviceList(types::ThorlabsSNList& list);
 
 private:
