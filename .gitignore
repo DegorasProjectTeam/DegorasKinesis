@@ -19,3 +19,6 @@ cmake_install.cmake
 *.autosave
 Thumbs.db
 .DS_Store
+
+# Structural reference only (not part of the library)
+/EXAMPLE_leobase-unitaryTestDev/

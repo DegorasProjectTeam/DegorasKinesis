@@ -69,15 +69,16 @@ The library is organised in three layers. The layer-boundary rule: the vendor SD
 **only** in Layer 2, so a new device on a different Kinesis module is added as a new Layer-2 adapter plus
 a thin Layer-3 personality — by composition, never a shared base class — reusing Layer 1 unchanged.
 
-| Layer | Folder | Knows about | Examples |
-|-------|--------|-------------|----------|
-| 1 — generic infrastructure | `Common/` | nothing vendor-specific | `OperationResult`, `DeviceError`, motion vocabulary, `StatusPoller<StatusT>`, `waitForCondition`, JSON helpers |
+| Layer | Folders | Knows about | Examples |
+|-------|---------|-------------|----------|
+| 1 — generic infrastructure | `Global/`, `Common/`, `Helpers/` | nothing vendor-specific | export macro; `OperationResult`, `DeviceError`, motion vocabulary; `StatusPoller<StatusT>`, `waitForCondition`, JSON helpers |
 | 2 — per-SDK-module adapter | `DCServo/` | one Kinesis module's C API | `DCServoChannel`, `decodeDCServoStatus`, discovery, `KinesisSimulatorSession` |
 | 3 — device personalities | `Devices/` | one device's identity & axis count | `M30X` (1 channel), `M30XY` (2 channels), behind `IMotionDevice` |
 
-Headers are consumed either individually as `#include "LibThorlabsKinesis/<Layer>/<file>.h"`, or a whole
-layer at once via a module aggregator: `#include <LibThorlabsKinesis/Modules/Devices>` (also `Common`,
-`DCServo`).
+Within Layer 1: `Global/` holds the export macro (and future global definitions), `Common/` the motion
+vocabulary and result/error model, and `Helpers/` the generic, project-agnostic infrastructure. Headers are
+consumed either individually as `#include "LibThorlabsKinesis/<Folder>/<file>.h"`, or a whole group at once
+via a module aggregator: `#include <LibThorlabsKinesis/Modules/Devices>` (also `Common`, `Helpers`, `DCServo`).
 
 ### Built With
 
@@ -162,9 +163,11 @@ returns `OperationResult::INVALID_CHANNEL`. See the `examples/` directory for a 
 ## Testing
 
 There is no test-framework dependency: the `testing/` executables are plain `assert()`-based checks, named
-`UT_*` for hardware-free unit tests, `Test_*` for integration tests, and `Example_*` for the demos under
-`examples/`. Build them with the project (`LIBTHORLABSKINESIS_BUILD_TESTING=ON`) and run from
-`build/<preset>/bin/`.
+`UT_*` for hardware-free unit tests and `Test_*` for integration tests (build with
+`LIBTHORLABSKINESIS_BUILD_TESTING=ON`). The `examples/` demos (`Example_*`) build with
+`LIBTHORLABSKINESIS_BUILD_EXAMPLES=ON`; each is a self-contained subproject (`<name>/CMakeLists.txt` +
+`main.cpp`) — `basic_device_discovery`, `basic_device_connection`, `multi_device_control`. Everything runs
+from `build/<preset>/bin/`.
 
 * `UT_*` — vocabulary/error mapping, status decode, the status poller, and JSON round-trip. No hardware.
 * `Test_M30XYSim` / `Test_M30XSim` — full SDK round-trip against the Kinesis Simulator; self-skip if absent.
