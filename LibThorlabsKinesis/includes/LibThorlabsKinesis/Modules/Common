@@ -23,11 +23,10 @@
 
 // =====================================================================================================================
 // MODULE: Common
-// Device- and SDK-agnostic foundation: result/error vocabulary, motion value types, the generic status poller and the
-// deadline-poll wait helper. Include with: #include <LibThorlabsKinesis/Modules/Common>
+// The library's core, device- and SDK-agnostic vocabulary: the export macro, the result/error model and the motion
+// value types (channels, directions, stop/jog modes, velocity and jog parameters). Include with:
+//     #include <LibThorlabsKinesis/Modules/Common>
 // =====================================================================================================================
 
-#include <LibThorlabsKinesis/libthorlabskinesis_global.h>
+#include <LibThorlabsKinesis/Global/libthorlabskinesis_export.h>
 #include <LibThorlabsKinesis/Common/common_types.h>
-#include <LibThorlabsKinesis/Common/status_poller.h>
-#include <LibThorlabsKinesis/Common/wait_for.h>

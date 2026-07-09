@@ -1,0 +1,17 @@
+/*
+ *      Copyright(C) Milethos Technologies SLU. 2025
+ *      All rights reserved. Reproduction in whole or in
+ *      part is prohibited without the written consent of
+ *      the copyright holder.
+ */
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+#include <LeoBase/Global/leobase_export.h>
+#include <LeoBase/Global/global_macros.h>
+#include <LeoBase/Global/global_type_traits.h>
+#include <LeoBase/Global/global_definitions.h>
+#include <LeoBase/Global/global_aliases.h>
+
+// ---------------------------------------------------------------------------------------------------------------------
+

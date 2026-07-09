@@ -29,8 +29,8 @@
 #include <thread>
 
 // PROJECT INCLUDES
-#include "LibThorlabsKinesis/Common/status_poller.h"
-#include "LibThorlabsKinesis/Common/wait_for.h"
+#include "LibThorlabsKinesis/Helpers/status_poller.h"
+#include "LibThorlabsKinesis/Helpers/wait_for.h"
 
 
 using namespace thorlabs;

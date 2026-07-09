@@ -29,7 +29,7 @@
 // PROJECT INCLUDES
 #include "LibThorlabsKinesis/Devices/m30x.h"
 #include "LibThorlabsKinesis/DCServo/dcservo_discovery.h"
-#include "LibThorlabsKinesis/Common/wait_for.h"
+#include "LibThorlabsKinesis/Helpers/wait_for.h"
 
 
 // NAMESPACES

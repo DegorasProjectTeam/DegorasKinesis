@@ -26,7 +26,7 @@
 
 // PROJECT INCLUDES
 #include "LibThorlabsKinesis/Common/common_types.h"
-#include "LibThorlabsKinesis/Common/json_utils.h"
+#include "LibThorlabsKinesis/Helpers/json_utils.h"
 
 
 // NAMESPACES

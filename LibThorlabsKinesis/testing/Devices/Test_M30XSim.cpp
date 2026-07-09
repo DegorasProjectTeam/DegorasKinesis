@@ -30,7 +30,7 @@
 // PROJECT INCLUDES
 #include "LibThorlabsKinesis/DCServo/kinesis_simulator.h"
 #include "LibThorlabsKinesis/Devices/m30x.h"
-#include "LibThorlabsKinesis/Common/wait_for.h"
+#include "LibThorlabsKinesis/Helpers/wait_for.h"
 
 
 using namespace thorlabs;

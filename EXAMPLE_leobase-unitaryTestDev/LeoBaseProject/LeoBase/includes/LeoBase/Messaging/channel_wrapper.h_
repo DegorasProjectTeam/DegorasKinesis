@@ -1,0 +1,107 @@
+/*
+ *      Copyright(C) Milethos Technologies SLU. 2017
+ *      All rights reserved. Reproduction in whole or in
+ *      part is prohibited without the written consent of
+ *      the copyright holder.
+ *
+ *      Author: Luis Galdos
+ *      Summary:
+ */
+
+#ifndef __LEOBASE_OBSERVER_WRAPPER_HPP__
+#define __LEOBASE_OBSERVER_WRAPPER_HPP__ 1
+
+#include <LeoBase/ClassPatterns/Observer.hpp>
+#include <LeoBase/ClassPatterns/Observable.hpp>
+#include <LeoBase/MessagePassing/IEvent.hpp>
+
+#include <forward_list>
+#include <memory>
+#include <mutex>
+#include <atomic>
+
+namespace LeoBase {
+
+    //
+    // This class stores pointers instead of shared pointers and also uses a mutex when deleting observers. This
+    // is required for Qt-widgets as destructor is probably invoked from a separated thread.
+    //
+    class ChannelWrapper : public LeoBase::Observer<LeoBase::IEventPtr>,
+                           public LeoBase::Observable<LeoBase::IEventPtr>
+    {
+    public:
+        ChannelWrapper() :
+            stop_(false)
+        {
+
+        }
+
+        ~ChannelWrapper()
+        {
+
+        }
+
+        void stop()
+        {
+            if (!stop_)
+            {
+                stop_ = true;
+            }
+        }
+
+        //Hmi observer maintenance
+        void addObserver(LeoBase::Observer<LeoBase::IEventPtr>* observer)
+        {
+            if (!stop_)
+            {
+                observers_.push_front(observer);
+            }
+        };
+
+        void removeObserver(LeoBase::Observer<LeoBase::IEventPtr>* observer)
+        {
+            if (!stop_)
+            {
+                mutex_.lock();
+                observers_.remove(observer);
+                mutex_.unlock();
+            }
+        };
+
+    private:
+        // Observer method
+        bool update(const LeoBase::IEventPtr &event)
+        {
+            if (stop_)
+            {
+                return true;
+            }
+
+            return notify(event);
+        }
+
+        bool notify(const LeoBase::IEventPtr& e)
+        {
+            bool retValue = true;
+            if (!stop_)
+            {
+                mutex_.lock();
+                for (auto& itr: observers_)
+                {
+                    retValue = itr->update(e);
+                }
+                mutex_.unlock();
+            }
+            return retValue;
+        };
+
+    private:
+        std::atomic<bool> stop_;
+        std::mutex mutex_;
+        std::forward_list<LeoBase::Observer<LeoBase::IEventPtr> *> observers_;
+    };
+
+    typedef std::shared_ptr<ChannelWrapper> ChannelWrapperPtr;
+}
+
+#endif // __LEOBASE_OBSERVER_WRAPPER_HPP__

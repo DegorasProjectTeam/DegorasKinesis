@@ -24,7 +24,7 @@
 #pragma once
 
 // PROJECT INCLUDES
-#include "LibThorlabsKinesis/libthorlabskinesis_global.h"
+#include "LibThorlabsKinesis/Global/libthorlabskinesis_export.h"
 #include "LibThorlabsKinesis/Common/common_types.h"
 
 

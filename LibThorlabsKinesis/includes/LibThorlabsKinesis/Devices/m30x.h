@@ -31,13 +31,13 @@
 #include <string>
 
 // PROJECT INCLUDES
-#include "LibThorlabsKinesis/libthorlabskinesis_global.h"
+#include "LibThorlabsKinesis/Global/libthorlabskinesis_export.h"
 #include "LibThorlabsKinesis/Common/common_types.h"
 #include "LibThorlabsKinesis/DCServo/dcservo_channel.h"
 #include "LibThorlabsKinesis/DCServo/dcservo_status.h"
 #include "LibThorlabsKinesis/Devices/i_motion_device.h"
 #include "LibThorlabsKinesis/Devices/m30x_types.h"
-#include "LibThorlabsKinesis/Common/status_poller.h"
+#include "LibThorlabsKinesis/Helpers/status_poller.h"
 
 
 // NAMESPACES

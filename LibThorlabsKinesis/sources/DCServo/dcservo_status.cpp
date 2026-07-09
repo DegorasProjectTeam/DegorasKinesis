@@ -27,7 +27,7 @@
 
 // PROJECT INCLUDES
 #include "LibThorlabsKinesis/DCServo/dcservo_status.h"
-#include "LibThorlabsKinesis/Common/json_utils.h"
+#include "LibThorlabsKinesis/Helpers/json_utils.h"
 
 
 // NAMESPACES
