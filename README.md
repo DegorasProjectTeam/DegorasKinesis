@@ -175,7 +175,7 @@ There is no test-framework dependency: the `testing/` executables are plain `ass
 `LIBDEGORASKINESIS_BUILD_TESTING=ON`). The `examples/` demos (`Example_*`) build with
 `LIBDEGORASKINESIS_BUILD_EXAMPLES=ON`; each is a self-contained subproject (`<name>/CMakeLists.txt` +
 `main.cpp`) — the generic `basic_device_discovery`, `basic_device_connection`, `multi_device_control` and the
-device-specific `m30x`, `m30xy`, `k10cr2`. Everything runs from `build/<preset>/bin/`.
+device-specific `M30X_control`, `M30XY_control`, `K10CR2_control`. Everything runs from `build/<preset>/bin/`.
 
 * `UT_*` — vocabulary/error mapping, status decode, the status poller, and JSON round-trip. No hardware.
 * `Test_M30XYSim` / `Test_M30XSim` / `Test_K10CR2Sim` — full SDK round-trip against the Kinesis Simulator

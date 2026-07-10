@@ -1,8 +1,8 @@
 # ----------------------------------------------------------------------------------------------------------------------
-# EXAMPLE: m30x
+# EXAMPLE: K10CR2_control
 # ----------------------------------------------------------------------------------------------------------------------
 
-add_executable(Example_m30x main.cpp)
-target_link_libraries(Example_m30x PRIVATE LibDegorasKinesis)
+add_executable(Example_K10CR2_control main.cpp)
+target_link_libraries(Example_K10CR2_control PRIVATE LibDegorasKinesis)
 
 # **********************************************************************************************************************

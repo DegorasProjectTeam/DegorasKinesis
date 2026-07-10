@@ -8,8 +8,8 @@
 add_subdirectory(basic_device_discovery)
 add_subdirectory(basic_device_connection)
 add_subdirectory(multi_device_control)
-add_subdirectory(m30x)
-add_subdirectory(m30xy)
-add_subdirectory(k10cr2)
+add_subdirectory(M30X_control)
+add_subdirectory(M30XY_control)
+add_subdirectory(K10CR2_control)
 
 # **********************************************************************************************************************
