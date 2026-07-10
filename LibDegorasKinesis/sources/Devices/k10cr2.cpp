@@ -49,6 +49,7 @@ K10CR2::K10CR2(const std::string& serial_no) :
     serial_no_(serial_no),
     poll_rate_ms_(500),
     i_own_open_(false),
+    units_ready_(false),
     ctrl_(serial_no)
 {}
 
@@ -104,12 +105,10 @@ OperationResult K10CR2::doConnect(const DeviceConfig& cfg)
 
     const std::string settings = cfg.settings.empty() ? std::string() : cfg.settings.front();
 
-    err = this->ctrl_.loadSettings(settings);
-    if (!err.ok())
-    {
-        rollback();
-        return err.category;
-    }
+    // LoadSettings failure is NON-FATAL: an integrated stepper still homes, moves and reports status in device
+    // units; only real-world-unit (degrees) conversion needs a loaded stage/settings profile. Track availability so
+    // the real-world-unit methods refuse cleanly and callers can fall back to the device-unit methods.
+    this->units_ready_ = this->ctrl_.loadSettings(settings).ok();
 
     err = this->ctrl_.startPolling(this->poll_rate_ms_);
     if (!err.ok())
@@ -198,6 +197,9 @@ OperationResult K10CR2::doMoveAbsolute(Channel ch, double real_pos)
     if (chk != OperationResult::OPERATION_OK)
         return chk;
 
+    if (!this->units_ready_)
+        return OperationResult::LOAD_SETTINGS_ERROR;
+
     int target_dev = 0;
     const DeviceError conv = this->ctrl_.realToDevice(PhysicalUnit::DISTANCE, real_pos, target_dev);
     if (!conv.ok())
@@ -210,6 +212,9 @@ OperationResult K10CR2::doMoveRelative(Channel ch, double real_pos)
     const OperationResult chk = this->checkChannel(ch);
     if (chk != OperationResult::OPERATION_OK)
         return chk;
+
+    if (!this->units_ready_)
+        return OperationResult::LOAD_SETTINGS_ERROR;
 
     int delta_dev = 0;
     const DeviceError conv = this->ctrl_.realToDevice(PhysicalUnit::DISTANCE, real_pos, delta_dev);
@@ -243,6 +248,9 @@ OperationResult K10CR2::getChannelPosition(Channel ch, double& real_pos)
     if (chk != OperationResult::OPERATION_OK)
         return chk;
 
+    if (!this->units_ready_)
+        return OperationResult::LOAD_SETTINGS_ERROR;
+
     int pos_raw = 0;
     DeviceError err = this->ctrl_.readPosition(pos_raw);
     if (!err.ok())
@@ -268,6 +276,38 @@ OperationResult K10CR2::getChannelFlags(Channel ch, kinesis::MotorStatusFlags& f
     return OperationResult::OPERATION_OK;
 }
 
+// -- Device-unit control (no stage/settings profile required) ---------------------------------------------------------
+
+bool K10CR2::hasRealUnits() const
+{
+    return this->units_ready_;
+}
+
+OperationResult K10CR2::doMoveAbsoluteDeviceUnits(Channel ch, int device_units)
+{
+    const OperationResult chk = this->checkChannel(ch);
+    if (chk != OperationResult::OPERATION_OK)
+        return chk;
+    return this->ctrl_.moveAbsolute(device_units).category;
+}
+
+OperationResult K10CR2::doMoveRelativeDeviceUnits(Channel ch, int device_units)
+{
+    const OperationResult chk = this->checkChannel(ch);
+    if (chk != OperationResult::OPERATION_OK)
+        return chk;
+    return this->ctrl_.moveRelative(device_units).category;
+}
+
+OperationResult K10CR2::getChannelPositionDeviceUnits(Channel ch, int& device_units)
+{
+    device_units = 0;
+    const OperationResult chk = this->checkChannel(ch);
+    if (chk != OperationResult::OPERATION_OK)
+        return chk;
+    return this->ctrl_.readPosition(device_units).category;
+}
+
 OperationResult K10CR2::fillChannelStatus(K10CR2ChannelStatus& status)
 {
     status = K10CR2ChannelStatus();
@@ -282,14 +322,19 @@ OperationResult K10CR2::fillChannelStatus(K10CR2ChannelStatus& status)
     if (!err.ok())
         return err.category;
 
-    double real_pos = 0.0;
-    err = this->ctrl_.deviceToReal(PhysicalUnit::DISTANCE, pos_raw, real_pos);
-    if (!err.ok())
-        return err.category;
-
     status.flags = kinesis::decodeMotorStatus(bits);
     status.pos_raw = pos_raw;
-    status.real_pos = real_pos;
+
+    // Real-world position only when a profile is loaded; otherwise report device units only (real_pos stays 0).
+    if (this->units_ready_)
+    {
+        double real_pos = 0.0;
+        err = this->ctrl_.deviceToReal(PhysicalUnit::DISTANCE, pos_raw, real_pos);
+        if (!err.ok())
+            return err.category;
+        status.real_pos = real_pos;
+    }
+
     status.valid = true;
     return OperationResult::OPERATION_OK;
 }

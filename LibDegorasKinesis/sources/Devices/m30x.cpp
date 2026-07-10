@@ -49,6 +49,7 @@ M30X::M30X(const std::string& serial_no) :
     serial_no_(serial_no),
     poll_rate_ms_(500),
     i_own_open_(false),
+    units_ready_(false),
     chan_(serial_no, Channel::X_CHANNEL)
 {}
 
@@ -104,12 +105,10 @@ OperationResult M30X::doConnect(const DeviceConfig& cfg)
 
     const std::string settings = cfg.settings.empty() ? std::string() : cfg.settings.front();
 
-    err = this->chan_.loadSettings(settings);
-    if (!err.ok())
-    {
-        rollback();
-        return err.category;
-    }
+    // LoadSettings failure is NON-FATAL: the axis still homes, moves and reports status in device units; only
+    // real-world-unit (mm) conversion needs a loaded stage/settings profile. Track availability so the real-world-
+    // unit methods refuse cleanly and callers can fall back to the device-unit methods.
+    this->units_ready_ = this->chan_.loadSettings(settings).ok();
 
     err = this->chan_.startPolling(this->poll_rate_ms_);
     if (!err.ok())
@@ -198,6 +197,9 @@ OperationResult M30X::doMoveAbsolute(Channel ch, double real_pos)
     if (chk != OperationResult::OPERATION_OK)
         return chk;
 
+    if (!this->units_ready_)
+        return OperationResult::LOAD_SETTINGS_ERROR;
+
     int target_dev = 0;
     const DeviceError conv = this->chan_.realToDevice(PhysicalUnit::DISTANCE, real_pos, target_dev);
     if (!conv.ok())
@@ -210,6 +212,9 @@ OperationResult M30X::doMoveRelative(Channel ch, double real_pos)
     const OperationResult chk = this->checkChannel(ch);
     if (chk != OperationResult::OPERATION_OK)
         return chk;
+
+    if (!this->units_ready_)
+        return OperationResult::LOAD_SETTINGS_ERROR;
 
     int delta_dev = 0;
     const DeviceError conv = this->chan_.realToDevice(PhysicalUnit::DISTANCE, real_pos, delta_dev);
@@ -243,6 +248,9 @@ OperationResult M30X::getChannelPosition(Channel ch, double& real_pos)
     if (chk != OperationResult::OPERATION_OK)
         return chk;
 
+    if (!this->units_ready_)
+        return OperationResult::LOAD_SETTINGS_ERROR;
+
     int pos_raw = 0;
     DeviceError err = this->chan_.readPosition(pos_raw);
     if (!err.ok())
@@ -268,6 +276,38 @@ OperationResult M30X::getChannelFlags(Channel ch, kinesis::MotorStatusFlags& fla
     return OperationResult::OPERATION_OK;
 }
 
+// -- Device-unit control (no stage/settings profile required) ---------------------------------------------------------
+
+bool M30X::hasRealUnits() const
+{
+    return this->units_ready_;
+}
+
+OperationResult M30X::doMoveAbsoluteDeviceUnits(Channel ch, int device_units)
+{
+    const OperationResult chk = this->checkChannel(ch);
+    if (chk != OperationResult::OPERATION_OK)
+        return chk;
+    return this->chan_.moveAbsolute(device_units).category;
+}
+
+OperationResult M30X::doMoveRelativeDeviceUnits(Channel ch, int device_units)
+{
+    const OperationResult chk = this->checkChannel(ch);
+    if (chk != OperationResult::OPERATION_OK)
+        return chk;
+    return this->chan_.moveRelative(device_units).category;
+}
+
+OperationResult M30X::getChannelPositionDeviceUnits(Channel ch, int& device_units)
+{
+    device_units = 0;
+    const OperationResult chk = this->checkChannel(ch);
+    if (chk != OperationResult::OPERATION_OK)
+        return chk;
+    return this->chan_.readPosition(device_units).category;
+}
+
 OperationResult M30X::fillChannelStatus(M30XChannelStatus& status)
 {
     status = M30XChannelStatus();
@@ -282,14 +322,19 @@ OperationResult M30X::fillChannelStatus(M30XChannelStatus& status)
     if (!err.ok())
         return err.category;
 
-    double real_pos = 0.0;
-    err = this->chan_.deviceToReal(PhysicalUnit::DISTANCE, pos_raw, real_pos);
-    if (!err.ok())
-        return err.category;
-
     status.flags = kinesis::decodeMotorStatus(bits);
     status.pos_raw = pos_raw;
-    status.real_pos = real_pos;
+
+    // Real-world position only when a profile is loaded; otherwise report device units only (real_pos stays 0).
+    if (this->units_ready_)
+    {
+        double real_pos = 0.0;
+        err = this->chan_.deviceToReal(PhysicalUnit::DISTANCE, pos_raw, real_pos);
+        if (!err.ok())
+            return err.category;
+        status.real_pos = real_pos;
+    }
+
     status.valid = true;
     return OperationResult::OPERATION_OK;
 }

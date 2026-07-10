@@ -31,9 +31,12 @@
 #include <LibDegorasKinesis/Modules/Devices>
 
 
-// Example: connect to a single K10CR2/M rotation stage, enable and home it, rotate the axis, read the angular
-// position and decoded status, then stop and disconnect. Works against the Kinesis Simulator (virtual K10CR2 with
-// serial 55000002) or real hardware. All positions are in DEGREES.
+// Example: discover, connect, initialise, home, move, read position/status, then stop and disconnect a K10CR2/M
+// rotation stage. Works against the Kinesis Simulator (virtual K10CR2 serial 55000002) or real hardware.
+//
+// Units: with a stage/settings profile loaded the stage is driven in DEGREES; without one (the simulator ships the
+// K10CR2 with no profile) hasRealUnits() is false and the demo drives it in raw device units (motor counts) -
+// exactly what the Kinesis GUI does with an unconfigured device.
 
 using namespace dpkin;
 using namespace dpkin::kinesis;
@@ -54,11 +57,10 @@ int main()
 {
     using namespace std::chrono;
 
-    // Connect to the Kinesis Simulator (a no-op against real hardware).
     KinesisSimulatorSession sim;
     std::cout << "Kinesis simulator: " << toString(sim.result()) << "\n";
 
-    // 1) Discover the K10CR2 controller(s).
+    // 1) Discover.
     types::ThorlabsSNList serials;
     if (!step("getDeviceList", K10CR2::getDeviceList(serials)) || serials.empty())
     {
@@ -67,42 +69,45 @@ int main()
     }
     std::cout << "Connecting to " << serials.front() << "\n";
 
-    // 2) Open + initialise (load settings, start polling, arm the freshness timer). No device I/O in the constructor.
+    // 2) Connect + initialise. No device I/O in the constructor.
     K10CR2 dev(serials.front());
-    const OperationResult conn = dev.doConnect();
-    if (!step("doConnect", conn))
-    {
-        if (conn == OperationResult::LOAD_SETTINGS_ERROR)
-        {
-            // Known simulator limitation, not a library error: discovery + open worked, only settings are absent.
-            std::cout << "NOTE: the simulated K10CR2 has no stage/settings profile assigned, so unit-dependent\n"
-                         "      operation (home/move/position in degrees) cannot be exercised. Discovery and open\n"
-                         "      succeeded; assign a stage in the simulator (or use real hardware) for full motion.\n";
-            return 0;
-        }
+    if (!step("doConnect", dev.doConnect()))
         return 1;
+
+    // 3) Enable + home (establishes the zero datum). Works regardless of the unit profile.
+    bool ok = step("doEnable(X)", dev.doEnable(Channel::X_CHANNEL, true))
+           && step("doHome(X)", dev.doHome(Channel::X_CHANNEL))
+           && step("waitForHomed", dev.waitForHomed(seconds(60)));
+
+    // 4) Move + read, in whichever unit is available.
+    if (dev.hasRealUnits())
+    {
+        ok = ok && step("doMoveAbsolute(X, 10 deg)", dev.doMoveAbsolute(Channel::X_CHANNEL, 10.0))
+                && step("waitForMoveFinished", dev.waitForMoveFinished(seconds(30)));
+        double angle_deg = 0.0;
+        dev.getChannelPosition(Channel::X_CHANNEL, angle_deg);
+        std::cout << "X angular position: " << angle_deg << " deg\n";
+    }
+    else
+    {
+        std::cout << "WARNING: no stage/settings profile is loaded, so real-world degrees are unavailable. Operating\n"
+                     "         in device units (motor counts) - assign a stage in the simulator, or use real hardware,\n"
+                     "         for degree-based motion.\n";
+        ok = ok && step("doMoveRelativeDeviceUnits(X, +200000)",
+                        dev.doMoveRelativeDeviceUnits(Channel::X_CHANNEL, 200000))
+                && step("waitForMoveFinished", dev.waitForMoveFinished(seconds(30)));
+        int counts = 0;
+        dev.getChannelPositionDeviceUnits(Channel::X_CHANNEL, counts);
+        std::cout << "X position: " << counts << " device units (counts)\n";
     }
 
-    // 3) Enable, home (establishes the zero datum), and rotate to a safe absolute angle.
-    const bool ok = step("doEnable(X)", dev.doEnable(Channel::X_CHANNEL, true))
-                 && step("doHome(X)", dev.doHome(Channel::X_CHANNEL))
-                 && step("waitForHomed(X)", dev.waitForHomed(seconds(60)))
-                 && step("doMoveAbsolute(X, 10 deg)", dev.doMoveAbsolute(Channel::X_CHANNEL, 10.0))
-                 && step("waitForMoveFinished(X)", dev.waitForMoveFinished(seconds(30)));
-
-    // 4) Read back the angular position and the decoded status.
-    double angle_deg = 0.0;
-    dev.getChannelPosition(Channel::X_CHANNEL, angle_deg);
-    std::cout << "X angular position: " << angle_deg << " deg\n";
-
+    // 5) Status snapshot, then a clean stop + disconnect (the destructor would also disconnect).
     types::K10CR2DeviceStatus status;
     if (dev.getDeviceStatus(status) == OperationResult::OPERATION_OK)
         std::cout << "status: " << status.toJsonStr() << "\n";
 
-    // 5) Stop and disconnect cleanly (the destructor would also disconnect).
     step("doStop(X)", dev.doStop(Channel::X_CHANNEL, StopMode::PROFILED));
     step("doDisconnect", dev.doDisconnect());
-
     std::cout << (ok ? "Done." : "Finished with errors.") << "\n";
     return ok ? 0 : 1;
 }

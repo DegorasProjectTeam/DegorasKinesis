@@ -24,7 +24,6 @@
 // C++ INCLUDES
 #include <cassert>
 #include <chrono>
-#include <cmath>
 #include <iostream>
 
 // PROJECT INCLUDES
@@ -40,48 +39,19 @@ using dpkin::types::OperationResult;
 using dpkin::types::StopMode;
 
 // ---------------------------------------------------------------------------------------------------------------------
-// LIVE simulator self-check for the M30X single-axis device (milestone M6). Requires the Kinesis Simulator running
-// with a virtual M30X (type 105). Self-skips (exit 0) when unavailable.
+// LIVE simulator self-check for the M30X single-axis device. Requires the Kinesis Simulator running with a virtual
+// M30X (type 105). Self-skips (exit 0) when unavailable.
 //
-// NOTE: if the simulator's virtual M30X has no stage/settings profile assigned, BDC_LoadSettings fails and connect
-// correctly returns LOAD_SETTINGS_ERROR; the test then validates the settings-independent behaviour and reports that
-// motion was skipped. The motion path itself is the same DCServoChannel validated live by AppM30XYSimTesting.
+// It verifies that the device is CONTROLLABLE even without a stage/settings profile (the simulator ships the M30X
+// with none): connect, homing, device-unit motion, position and status all work. Real-world-unit (mm) methods are
+// gated - they return LOAD_SETTINGS_ERROR until a profile is loaded (real hardware) - rather than reporting a wrong
+// value. If a profile IS present (e.g. real hardware), the mm-based path is exercised too.
 // ---------------------------------------------------------------------------------------------------------------------
-
-namespace
-{
-
-void runFullMotion(M30X& dev, const std::string& serial)
-{
-    using namespace std::chrono;
-    (void) serial;
-
-    assert(dev.isConnected());
-    assert(dev.doConnect() == OperationResult::ALREADY_CONNECTED);
-
-    assert(dev.doEnable(Channel::X_CHANNEL, true) == OperationResult::OPERATION_OK);
-    assert(dev.doHome(Channel::X_CHANNEL) == OperationResult::OPERATION_OK);
-
-    // Status read + decode contract.
-    types::M30XDeviceStatus status;
-    assert(dev.getDeviceStatus(status) == OperationResult::OPERATION_OK);
-    assert(status.connected && status.chann.valid);
-    std::cout << "status: " << status.toJsonStr() << "\n";
-
-    // Motion command contract (physical translation is sim-dependent; position is logged, not asserted).
-    assert(dev.doMoveAbsolute(Channel::X_CHANNEL, 3.0) == OperationResult::OPERATION_OK);
-    dev.waitForMoveFinished(seconds(10));
-    double real_pos = 0.0;
-    dev.getChannelPosition(Channel::X_CHANNEL, real_pos);
-    std::cout << "X position after move-to-3mm command: " << real_pos << " mm (target reached only with a real stage)\n";
-
-    assert(dev.doStop(Channel::X_CHANNEL, StopMode::PROFILED) == OperationResult::OPERATION_OK);
-}
-
-} // namespace
 
 int main()
 {
+    using namespace std::chrono;
+
     KinesisSimulatorSession sim;
     std::cout << "simulator session: " << toString(sim.result()) << "\n";
     if (!sim.usable())
@@ -106,28 +76,60 @@ int main()
     assert(!dev.isConnected());
 
     // Channel validation is checked before any device I/O, so it works without a connection.
-    assert(dev.doMoveAbsolute(Channel::Y_CHANNEL, 1.0) == OperationResult::INVALID_CHANNEL);
+    assert(dev.doMoveAbsoluteDeviceUnits(Channel::Y_CHANNEL, 1000) == OperationResult::INVALID_CHANNEL);
     {
-        double dummy = 0.0;
-        assert(dev.getChannelPosition(Channel::Y_CHANNEL, dummy) == OperationResult::INVALID_CHANNEL);
+        int dummy = 0;
+        assert(dev.getChannelPositionDeviceUnits(Channel::Y_CHANNEL, dummy) == OperationResult::INVALID_CHANNEL);
     }
 
+    // Connect now SUCCEEDS even when the stage/settings profile is absent (LoadSettings is non-fatal).
     const OperationResult conn = dev.doConnect();
     std::cout << "doConnect: " << types::toString(conn) << "\n";
+    assert(conn == OperationResult::OPERATION_OK);
+    assert(dev.isConnected());
+    assert(dev.doConnect() == OperationResult::ALREADY_CONNECTED);
+    std::cout << "hasRealUnits: " << (dev.hasRealUnits() ? "true" : "false") << "\n";
 
-    if (conn == OperationResult::LOAD_SETTINGS_ERROR)
+    // Homing and status work regardless of the unit profile.
+    assert(dev.doEnable(Channel::X_CHANNEL, true) == OperationResult::OPERATION_OK);
+
+    // Force a known idle state before homing: a previous aborted run (assert -> abort skips the destructor's close)
+    // can leave the simulated device mid-motion, which would make the SDK reject the next command.
+    dev.doStop(Channel::X_CHANNEL, StopMode::IMMEDIATE);
+    dev.waitForMoveFinished(seconds(5));
+
+    assert(dev.doHome(Channel::X_CHANNEL) == OperationResult::OPERATION_OK);
+    dev.waitForHomed(seconds(30));   // homing must finish before a move is accepted
+
+    types::M30XDeviceStatus status;
+    assert(dev.getDeviceStatus(status) == OperationResult::OPERATION_OK);
+    assert(status.connected && status.chann.valid);
+    std::cout << "status: " << status.toJsonStr() << "\n";
+
+    // Device-unit (motor count) control works with or without a profile.
+    assert(dev.doMoveRelativeDeviceUnits(Channel::X_CHANNEL, 100000) == OperationResult::OPERATION_OK);
+    dev.waitForMoveFinished(seconds(10));
+    int counts = 0;
+    assert(dev.getChannelPositionDeviceUnits(Channel::X_CHANNEL, counts) == OperationResult::OPERATION_OK);
+    std::cout << "device-unit position after relative move: " << counts << " counts\n";
+
+    if (dev.hasRealUnits())
     {
-        std::cout << "NOTE: the simulator's virtual M30X (" << serial << ") has no stage/settings profile assigned,\n"
-                     "      so settings-dependent operation (home/move/units) cannot be exercised here. Discovery,\n"
-                     "      BDC_Open, channel validation and the single-axis driver are confirmed; the motion path is\n"
-                     "      the same DCServoChannel validated live by AppM30XYSimTesting.\n";
-        std::cout << "Test_M30XSim: PASSED (motion skipped - sim M30X has no stage configured)" << std::endl;
-        return 0;
+        assert(dev.doMoveAbsolute(Channel::X_CHANNEL, 3.0) == OperationResult::OPERATION_OK);
+        dev.waitForMoveFinished(seconds(10));
+        double mm = 0.0;
+        assert(dev.getChannelPosition(Channel::X_CHANNEL, mm) == OperationResult::OPERATION_OK);
+        std::cout << "position: " << mm << " mm\n";
+    }
+    else
+    {
+        assert(dev.doMoveAbsolute(Channel::X_CHANNEL, 3.0) == OperationResult::LOAD_SETTINGS_ERROR);
+        double mm = 0.0;
+        assert(dev.getChannelPosition(Channel::X_CHANNEL, mm) == OperationResult::LOAD_SETTINGS_ERROR);
+        std::cout << "no profile: mm methods correctly return LOAD_SETTINGS_ERROR; device-unit control verified.\n";
     }
 
-    assert(conn == OperationResult::OPERATION_OK);
-    runFullMotion(dev, serial);
-
+    assert(dev.doStop(Channel::X_CHANNEL, StopMode::PROFILED) == OperationResult::OPERATION_OK);
     assert(dev.doDisconnect() == OperationResult::OPERATION_OK);
     assert(!dev.isConnected());
 

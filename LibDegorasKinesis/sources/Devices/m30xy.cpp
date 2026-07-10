@@ -50,6 +50,7 @@ M30XY::M30XY(const std::string& serial_no) :
     serial_no_(serial_no),
     poll_rate_ms_(500),
     i_own_open_(false),
+    units_ready_(false),
     chans_{ dcservo::DCServoChannel(serial_no, Channel::X_CHANNEL),
             dcservo::DCServoChannel(serial_no, Channel::Y_CHANNEL) }
 {}
@@ -109,16 +110,15 @@ OperationResult M30XY::doConnect(const DeviceConfig& cfg)
         this->chans_[0].close();
     };
 
+    // LoadSettings failure is NON-FATAL (see K10CR2/M30X): each axis still works in device units; only
+    // real-world-unit (mm) conversion needs a loaded stage/settings profile.
+    this->units_ready_ = true;
     for (std::size_t i = 0; i < this->chans_.size(); ++i)
     {
         const std::string settings = (i < cfg.settings.size()) ? cfg.settings[i] : std::string();
 
-        err = this->chans_[i].loadSettings(settings);
-        if (!err.ok())
-        {
-            rollback();
-            return err.category;
-        }
+        if (!this->chans_[i].loadSettings(settings).ok())
+            this->units_ready_ = false;
 
         err = this->chans_[i].startPolling(this->poll_rate_ms_);
         if (!err.ok())
@@ -218,6 +218,8 @@ OperationResult M30XY::doJog(Channel ch, TravelDirection direction)
 
 OperationResult M30XY::doMoveAbsolute(Channel ch, double real_pos)
 {
+    if (!this->units_ready_)
+        return OperationResult::LOAD_SETTINGS_ERROR;
     dcservo::DCServoChannel& c = this->channelFor(ch);
     int target_dev = 0;
     const DeviceError conv = c.realToDevice(PhysicalUnit::DISTANCE, real_pos, target_dev);
@@ -228,6 +230,8 @@ OperationResult M30XY::doMoveAbsolute(Channel ch, double real_pos)
 
 OperationResult M30XY::doMoveRelative(Channel ch, double real_pos)
 {
+    if (!this->units_ready_)
+        return OperationResult::LOAD_SETTINGS_ERROR;
     dcservo::DCServoChannel& c = this->channelFor(ch);
     int delta_dev = 0;
     const DeviceError conv = c.realToDevice(PhysicalUnit::DISTANCE, real_pos, delta_dev);
@@ -251,6 +255,8 @@ OperationResult M30XY::doConfigureJog(Channel ch, const JogParameters& params)
 OperationResult M30XY::getChannelPosition(Channel ch, double& real_pos)
 {
     real_pos = 0.0;
+    if (!this->units_ready_)
+        return OperationResult::LOAD_SETTINGS_ERROR;
     dcservo::DCServoChannel& c = this->channelFor(ch);
 
     int pos_raw = 0;
@@ -275,6 +281,29 @@ OperationResult M30XY::getChannelFlags(Channel ch, kinesis::MotorStatusFlags& fl
     return OperationResult::OPERATION_OK;
 }
 
+// -- Device-unit control (no stage/settings profile required) ---------------------------------------------------------
+
+bool M30XY::hasRealUnits() const
+{
+    return this->units_ready_;
+}
+
+OperationResult M30XY::doMoveAbsoluteDeviceUnits(Channel ch, int device_units)
+{
+    return this->channelFor(ch).moveAbsolute(device_units).category;
+}
+
+OperationResult M30XY::doMoveRelativeDeviceUnits(Channel ch, int device_units)
+{
+    return this->channelFor(ch).moveRelative(device_units).category;
+}
+
+OperationResult M30XY::getChannelPositionDeviceUnits(Channel ch, int& device_units)
+{
+    device_units = 0;
+    return this->channelFor(ch).readPosition(device_units).category;
+}
+
 OperationResult M30XY::getChannelStatus(Channel ch, M30XYChannelStatus& status)
 {
     status = M30XYChannelStatus(ch);
@@ -290,14 +319,19 @@ OperationResult M30XY::getChannelStatus(Channel ch, M30XYChannelStatus& status)
     if (!err.ok())
         return err.category;
 
-    double real_pos = 0.0;
-    err = c.deviceToReal(PhysicalUnit::DISTANCE, pos_raw, real_pos);
-    if (!err.ok())
-        return err.category;
-
     status.flags = kinesis::decodeMotorStatus(bits);
     status.pos_raw = pos_raw;
-    status.real_pos = real_pos;
+
+    // Real-world position only when a profile is loaded; otherwise report device units only (real_pos stays 0).
+    if (this->units_ready_)
+    {
+        double real_pos = 0.0;
+        err = c.deviceToReal(PhysicalUnit::DISTANCE, pos_raw, real_pos);
+        if (!err.ok())
+            return err.category;
+        status.real_pos = real_pos;
+    }
+
     status.valid = true;
     return OperationResult::OPERATION_OK;
 }

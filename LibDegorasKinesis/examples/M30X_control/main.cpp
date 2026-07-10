@@ -31,9 +31,11 @@
 #include <LibDegorasKinesis/Modules/Devices>
 
 
-// Example: connect to a single M30X single-axis benchtop DC-servo stage, enable and home it, move the axis, read
-// the position and decoded status, then stop and disconnect. Works against the Kinesis Simulator (virtual M30X,
-// type 105) or real hardware. All positions are in MILLIMETRES.
+// Example: discover, connect, initialise, home, move, read position/status, then stop and disconnect an M30X
+// single-axis benchtop DC-servo stage. Works against the Kinesis Simulator (virtual M30X, type 105) or real hardware.
+//
+// Units: with a stage/settings profile loaded the stage is driven in MILLIMETRES; without one (the simulator ships
+// the M30X with no profile) hasRealUnits() is false and the demo drives it in raw device units (motor counts).
 
 using namespace dpkin;
 using namespace dpkin::kinesis;
@@ -54,11 +56,9 @@ int main()
 {
     using namespace std::chrono;
 
-    // Connect to the Kinesis Simulator (a no-op against real hardware).
     KinesisSimulatorSession sim;
     std::cout << "Kinesis simulator: " << toString(sim.result()) << "\n";
 
-    // 1) Discover the M30X controller(s).
     types::ThorlabsSNList serials;
     if (!step("getDeviceList", M30X::getDeviceList(serials)) || serials.empty())
     {
@@ -67,42 +67,43 @@ int main()
     }
     std::cout << "Connecting to " << serials.front() << "\n";
 
-    // 2) Open + initialise (load settings, start polling, arm the freshness timer). No device I/O in the constructor.
-    M30X dev(serials.front());
-    const OperationResult conn = dev.doConnect();
-    if (!step("doConnect", conn))
-    {
-        if (conn == OperationResult::LOAD_SETTINGS_ERROR)
-        {
-            // Known simulator limitation, not a library error: discovery + open worked, only settings are absent.
-            std::cout << "NOTE: the simulated M30X has no stage/settings profile assigned, so unit-dependent\n"
-                         "      operation (home/move/position in mm) cannot be exercised. Discovery and open\n"
-                         "      succeeded; assign a stage in the simulator (or use real hardware) for full motion.\n";
-            return 0;
-        }
+    M30X dev(serials.front());            // no device I/O in the constructor
+    if (!step("doConnect", dev.doConnect()))
         return 1;
+
+    // Enable + home. Works regardless of the unit profile.
+    bool ok = step("doEnable(X)", dev.doEnable(Channel::X_CHANNEL, true))
+           && step("doHome(X)", dev.doHome(Channel::X_CHANNEL))
+           && step("waitForHomed", dev.waitForHomed(seconds(60)));
+
+    // Move + read, in whichever unit is available.
+    if (dev.hasRealUnits())
+    {
+        ok = ok && step("doMoveAbsolute(X, 5 mm)", dev.doMoveAbsolute(Channel::X_CHANNEL, 5.0))
+                && step("waitForMoveFinished", dev.waitForMoveFinished(seconds(30)));
+        double pos_mm = 0.0;
+        dev.getChannelPosition(Channel::X_CHANNEL, pos_mm);
+        std::cout << "X position: " << pos_mm << " mm\n";
     }
-
-    // 3) Enable, home, and move to a safe absolute position.
-    const bool ok = step("doEnable(X)", dev.doEnable(Channel::X_CHANNEL, true))
-                 && step("doHome(X)", dev.doHome(Channel::X_CHANNEL))
-                 && step("waitForHomed", dev.waitForHomed(seconds(60)))
-                 && step("doMoveAbsolute(X, 5 mm)", dev.doMoveAbsolute(Channel::X_CHANNEL, 5.0))
-                 && step("waitForMoveFinished", dev.waitForMoveFinished(seconds(30)));
-
-    // 4) Read back the position and the decoded status.
-    double pos_mm = 0.0;
-    dev.getChannelPosition(Channel::X_CHANNEL, pos_mm);
-    std::cout << "X position: " << pos_mm << " mm\n";
+    else
+    {
+        std::cout << "WARNING: no stage/settings profile is loaded, so real-world millimetres are unavailable.\n"
+                     "         Operating in device units (motor counts) - assign a stage in the simulator, or use\n"
+                     "         real hardware, for mm-based motion.\n";
+        ok = ok && step("doMoveRelativeDeviceUnits(X, +100000)",
+                        dev.doMoveRelativeDeviceUnits(Channel::X_CHANNEL, 100000))
+                && step("waitForMoveFinished", dev.waitForMoveFinished(seconds(30)));
+        int counts = 0;
+        dev.getChannelPositionDeviceUnits(Channel::X_CHANNEL, counts);
+        std::cout << "X position: " << counts << " device units (counts)\n";
+    }
 
     types::M30XDeviceStatus status;
     if (dev.getDeviceStatus(status) == OperationResult::OPERATION_OK)
         std::cout << "status: " << status.toJsonStr() << "\n";
 
-    // 5) Stop and disconnect cleanly (the destructor would also disconnect).
     step("doStop(X)", dev.doStop(Channel::X_CHANNEL, StopMode::PROFILED));
     step("doDisconnect", dev.doDisconnect());
-
     std::cout << (ok ? "Done." : "Finished with errors.") << "\n";
     return ok ? 0 : 1;
 }

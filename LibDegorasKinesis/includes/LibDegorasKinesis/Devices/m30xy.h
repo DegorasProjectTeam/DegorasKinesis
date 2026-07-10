@@ -95,6 +95,18 @@ public:
     types::OperationResult getChannelFlags(types::Channel ch, kinesis::MotorStatusFlags& flags) override;
     /// @}
 
+    // -- Device-unit control (usable even without a loaded stage/settings profile) --
+    /// @brief Whether a stage/settings profile is loaded, i.e. whether real-world-unit (mm) operations are available.
+    ///        When false the real-world-unit methods (doMoveAbsolute/doMoveRelative/getChannelPosition) return
+    ///        OperationResult::LOAD_SETTINGS_ERROR; drive and read the stage with the device-unit methods below.
+    bool hasRealUnits() const;
+    /// @brief Absolute move to a raw device-unit (motor count) position. Works without a profile. Non-blocking.
+    types::OperationResult doMoveAbsoluteDeviceUnits(types::Channel ch, int device_units);
+    /// @brief Relative move by a raw device-unit (motor count) displacement. Works without a profile. Non-blocking.
+    types::OperationResult doMoveRelativeDeviceUnits(types::Channel ch, int device_units);
+    /// @brief Read the position in raw device units (motor counts). Works without a profile.
+    types::OperationResult getChannelPositionDeviceUnits(types::Channel ch, int& device_units);
+
     // -- Dual-axis conveniences (fan-out / aggregation; not on the interface) --
     types::OperationResult doEnableChannels(bool enable);   ///< Enable/disable both axes (first-error-wins).
     types::OperationResult doHomeAll();                     ///< Home both axes (first-error-wins).
@@ -125,6 +137,7 @@ private:
     std::string serial_no_;
     int poll_rate_ms_;
     bool i_own_open_;                                  ///< True if THIS object opened the connection (vs aliasing it).
+    bool units_ready_;                                 ///< True if a stage/settings profile loaded (real-world units OK).
     std::array<dcservo::DCServoChannel, 2> chans_;     ///< [0] = X, [1] = Y.
     mutable std::mutex cb_mtx_;                        ///< Guards cb_.
     NewStatusCb cb_;                                   ///< Consumer status callback.

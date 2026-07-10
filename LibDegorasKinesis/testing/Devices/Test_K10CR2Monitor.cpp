@@ -47,7 +47,9 @@ using dpkin::types::TravelDirection;
 // the live decoded status on every poll, and runs a scripted command sequence (home, jog FWD/REV, move-relative,
 // move-to) so the commanded motion is visible in the Kinesis Simulator window. After the scripted part it keeps
 // monitoring for the rest of the requested duration, so the stage can also be driven MANUALLY and watched here.
-// Angles are in DEGREES.
+//
+// If a stage/settings profile is loaded the angle is shown in DEGREES and the scripted moves are in degrees; if not
+// (the simulator default), the tool warns, shows raw motor COUNTS, and issues the scripted moves in device units.
 //
 // Usage: Test_K10CR2Monitor [seconds]   (default 30). This is an observational tool, not an assert-based test.
 // ---------------------------------------------------------------------------------------------------------------------
@@ -63,11 +65,12 @@ void line(const std::string& text)
     std::cout << text << std::endl;
 }
 
-std::string axisDesc(const types::K10CR2ChannelStatus& s)
+std::string axisDesc(const types::K10CR2ChannelStatus& s, bool real_units)
 {
     std::ostringstream ss;
     const auto& f = s.flags;
-    ss << s.real_pos << "deg ";
+    if (real_units) ss << s.real_pos << "deg ";
+    else            ss << s.pos_raw << "cnt ";
     if (f.isMoving())       ss << "MOVING";
     else if (f.isJogging()) ss << "JOGGING";
     else if (f.homing)      ss << "homing";
@@ -98,27 +101,29 @@ int main(int argc, char** argv)
     const OperationResult conn = dev.doConnect();
     if (conn != OperationResult::OPERATION_OK)
     {
-        line(std::string("Connect: ") + types::toString(conn));
-        if (conn == OperationResult::LOAD_SETTINGS_ERROR)
-            line("NOTE: the simulated K10CR2 has no stage/settings profile assigned, so motion/units cannot be\n"
-                 "      monitored here. Assign a stage in the simulator (or use real hardware) to observe motion.");
+        line(std::string("Connect failed: ") + types::toString(conn));
         return 0;
     }
     dev.doEnable(Channel::X_CHANNEL, true);
 
+    const bool real_units = dev.hasRealUnits();
+    if (!real_units)
+        line("WARNING: no stage/settings profile loaded - showing raw device units (counts) and commanding motion in\n"
+             "         device units. Assign a stage in the simulator (or use real hardware) for degree-based motion.");
+
     // Live status print on every poll (runs on the worker thread; output is serialised by g_print).
-    dev.setNewStatusCb([](OperationResult r, const types::K10CR2DeviceStatus& s)
+    dev.setNewStatusCb([real_units](OperationResult r, const types::K10CR2DeviceStatus& s)
     {
         if (r != OperationResult::OPERATION_OK)
             return;
-        line("[status]  axis: " + axisDesc(s.chann));
+        line("[status]  axis: " + axisDesc(s.chann, real_units));
     });
     dev.startStatusPolling();
 
     line("================================================================================");
     line("Monitoring for " + std::to_string(duration_s) + " s. Rotate the stage MANUALLY in the");
-    line("simulator at any time to see the angle evolve below. A scripted command sequence");
-    line("runs first so you can watch the commanded rotations in the simulator.");
+    line("simulator at any time to see the position evolve below. A scripted command");
+    line("sequence runs first so you can watch the commanded motions in the simulator.");
     line("================================================================================");
 
     const auto issue = [&](const std::string& name, OperationResult r)
@@ -126,7 +131,8 @@ int main(int argc, char** argv)
         line(">>> " + name + "  ->  " + types::toString(r));
     };
 
-    // Scripted demonstration sequence (each command is followed by an observation window).
+    // Scripted demonstration sequence. Homing, jogging and stopping are unit-independent; the relative/absolute
+    // moves use real-world degrees when a profile is loaded, otherwise raw device units.
     issue("home", dev.doHome(Channel::X_CHANNEL));
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
@@ -140,13 +146,22 @@ int main(int argc, char** argv)
     issue("stop", dev.doStop(Channel::X_CHANNEL, StopMode::PROFILED));
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    issue("move relative +5 deg", dev.doMoveRelative(Channel::X_CHANNEL, 5.0));
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    if (real_units)
+    {
+        issue("move relative +5 deg", dev.doMoveRelative(Channel::X_CHANNEL, 5.0));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        issue("move absolute 10 deg", dev.doMoveAbsolute(Channel::X_CHANNEL, 10.0));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+    }
+    else
+    {
+        issue("move relative +200000 counts", dev.doMoveRelativeDeviceUnits(Channel::X_CHANNEL, 200000));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        issue("move absolute 400000 counts", dev.doMoveAbsoluteDeviceUnits(Channel::X_CHANNEL, 400000));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+    }
 
-    issue("move absolute 10 deg", dev.doMoveAbsolute(Channel::X_CHANNEL, 10.0));
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-
-    line("--- Scripted sequence done. Free monitoring continues; rotate the stage manually now. ---");
+    line("--- Scripted sequence done. Free monitoring continues; drive the stage manually now. ---");
 
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(duration_s);
     while (std::chrono::steady_clock::now() < deadline)
