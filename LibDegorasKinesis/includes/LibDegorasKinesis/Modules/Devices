@@ -1,0 +1,37 @@
+/*
+ *  LibDegorasKinesis - An extensible C++ library for controlling Thorlabs Kinesis motion devices.
+ *
+ *  Developed as free software by and for the Spanish Navy Observatory SLR station (SFEL) in San Fernando.
+ *
+ *  Copyright (C) 2024-2026 Degoras Project Team
+ *                          < Ángel Vera Herrera, avera@roa.es - angelvh.engr@gmail.com >
+ *                          < Jesús Relinque Madroñal, jrelinque@roa.es >
+ *
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU General
+ *  Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+ *  option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+ *  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ *  for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along with this program. If not, see
+ *  <https://www.gnu.org/licenses/>.
+ *
+ *  SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+// =====================================================================================================================
+// MODULE: Devices
+// Consumer-facing device personalities and the hardware-agnostic motion interface: IMotionDevice, the M30X (single-
+// axis) and M30XY (dual-axis) DC-servo stages, the K10CR2 (rotation, degrees) integrated-stepper stage, and their
+// status types. Include with: #include <LibDegorasKinesis/Modules/Devices>
+// =====================================================================================================================
+
+#include <LibDegorasKinesis/Devices/i_motion_device.h>
+#include <LibDegorasKinesis/Devices/m30x_types.h>
+#include <LibDegorasKinesis/Devices/m30x.h>
+#include <LibDegorasKinesis/Devices/m30xy_types.h>
+#include <LibDegorasKinesis/Devices/m30xy.h>
+#include <LibDegorasKinesis/Devices/k10cr2_types.h>
+#include <LibDegorasKinesis/Devices/k10cr2.h>

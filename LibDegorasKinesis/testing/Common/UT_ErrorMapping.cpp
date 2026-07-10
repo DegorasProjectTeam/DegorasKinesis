@@ -1,0 +1,117 @@
+/*
+ *  LibDegorasKinesis - An extensible C++ library for controlling Thorlabs Kinesis motion devices.
+ *
+ *  Developed as free software by and for the Spanish Navy Observatory SLR station (SFEL) in San Fernando.
+ *
+ *  Copyright (C) 2024-2026 Degoras Project Team
+ *                          < Ángel Vera Herrera, avera@roa.es - angelvh.engr@gmail.com >
+ *                          < Jesús Relinque Madroñal, jrelinque@roa.es >
+ *
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU General
+ *  Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+ *  option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+ *  implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+ *  for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along with this program. If not, see
+ *  <https://www.gnu.org/licenses/>.
+ *
+ *  SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+// C++ INCLUDES
+#include <cassert>
+#include <iostream>
+#include <set>
+#include <string>
+
+// PROJECT INCLUDES
+#include "LibDegorasKinesis/Common/common_types.h"
+
+
+using namespace dpkin::types;
+
+// ---------------------------------------------------------------------------------------------------------------------
+// No-hardware self-check for the Layer-1 vocabulary and error model (milestone M1).
+// Built as an assert()-based executable, matching the proof-of-concept "testing is an app" convention.
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+
+void testOperationResultToStringIsTotalAndUnique()
+{
+    const OperationResult all[] = {
+        OperationResult::OPERATION_OK,            OperationResult::NOT_CONNECTED,
+        OperationResult::DEVICE_NOT_FOUND,        OperationResult::ALREADY_CONNECTED,
+        OperationResult::SERIAL_IN_USE,           OperationResult::LOAD_SETTINGS_ERROR,
+        OperationResult::START_POLLING_ERROR,     OperationResult::OPERATION_TIMEOUT,
+        OperationResult::THORLABS_INTERNAL_ERROR, OperationResult::WORKER_ALREADY_RUNNING,
+        OperationResult::WORKER_NOT_RUNNING,      OperationResult::WORKER_START_ERROR,
+        OperationResult::READ_FAILED,             OperationResult::INVALID_CHANNEL
+    };
+
+    std::set<std::string> seen;
+    for (OperationResult r : all)
+    {
+        const std::string s = toString(r);
+        assert(!s.empty() && "every result must stringify");
+        assert(s != "UNKNOWN_OPERATION_RESULT" && "every enumerator must be handled by toString");
+        assert(seen.insert(s).second && "toString values must be unique");
+    }
+}
+
+void testDeviceErrorSemantics()
+{
+    DeviceError ok_err;
+    assert(ok_err.ok());
+    assert(ok_err.category == OperationResult::OPERATION_OK);
+    assert(ok_err.kinesis_code == 0);
+
+    DeviceError err;
+    err.category = OperationResult::THORLABS_INTERNAL_ERROR;
+    err.kinesis_code = 4;
+    err.context = "BDC_Home(ch=1)";
+    assert(!err.ok());
+
+    const std::string msg = err.toString();
+    assert(msg.find("THORLABS_INTERNAL_ERROR") != std::string::npos);
+    assert(msg.find("4") != std::string::npos);
+    assert(msg.find("BDC_Home(ch=1)") != std::string::npos);
+}
+
+void testNumericAdapters()
+{
+    assert(toType(Channel::X_CHANNEL) == 1);
+    assert(toType(Channel::Y_CHANNEL) == 2);
+    assert(toType(StopMode::IMMEDIATE) == 1);
+    assert(toType(StopMode::PROFILED) == 2);
+    assert(toType(JogMode::CONTINUOUS) == 1);
+    assert(toType(PhysicalUnit::DISTANCE) == 0);
+    assert(toType(PhysicalUnit::ACCELERATION) == 2);
+    assert(toType(TravelDirection::FORWARDS) == 1);
+    assert(toType(TravelDirection::REVERSE) == 2);
+}
+
+} // namespace
+
+int main()
+{
+    // Compile-time guarantees: explicit/stable result values, and the TravelDirection bug fix
+    // (the proof of concept defined UNDEFINED and FORWARDS both as 0x01).
+    static_assert(static_cast<int>(OperationResult::OPERATION_OK) == 0, "OPERATION_OK must be 0");
+    static_assert(static_cast<int>(OperationResult::READ_FAILED) == 12, "READ_FAILED must be 12");
+    static_assert(static_cast<int>(TravelDirection::UNDEFINED) == 0x00, "UNDEFINED must be 0x00 (bug fix)");
+    static_assert(static_cast<int>(TravelDirection::FORWARDS) == 0x01, "FORWARDS must be 0x01");
+    static_assert(static_cast<int>(TravelDirection::UNDEFINED) != static_cast<int>(TravelDirection::FORWARDS),
+                  "UNDEFINED and FORWARDS must be distinguishable");
+
+    testOperationResultToStringIsTotalAndUnique();
+    testDeviceErrorSemantics();
+    testNumericAdapters();
+
+    std::cout << "UT_ErrorMapping: ALL CHECKS PASSED" << std::endl;
+    return 0;
+}
