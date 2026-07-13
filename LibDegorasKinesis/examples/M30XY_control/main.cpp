@@ -82,10 +82,16 @@ int main()
         return 1;
     }
 
-    // 3) Enable both axes, home both, then move each to a safe absolute position.
-    const bool ok = step("doEnableChannels", dev.doEnableChannels(true))
-                 && step("doHomeAll", dev.doHomeAll())
-                 && step("waitForHomed(X)", dev.waitForHomed(Channel::X_CHANNEL, seconds(60)))
+    // 3) Enable both axes, then establish a known idle state before homing. The Kinesis Simulator keeps each
+    //    device's motion state across connections (and a profiled stop is still decelerating when the previous run
+    //    closed), so a fresh connection can find an axis "in motion", which makes Home fail; a stop + short settle
+    //    avoids that. Home both, then move each to a safe absolute position.
+    bool ok = step("doEnableChannels", dev.doEnableChannels(true));
+    dev.doStopAll(StopMode::IMMEDIATE);
+    dev.waitForMoveFinished(Channel::X_CHANNEL, seconds(5));
+    dev.waitForMoveFinished(Channel::Y_CHANNEL, seconds(5));
+    ok = ok && step("doHomeAll", dev.doHomeAll())
+            && step("waitForHomed(X)", dev.waitForHomed(Channel::X_CHANNEL, seconds(60)))
                  && step("waitForHomed(Y)", dev.waitForHomed(Channel::Y_CHANNEL, seconds(60)))
                  && step("doMoveAbsolute(X, 5 mm)", dev.doMoveAbsolute(Channel::X_CHANNEL, 5.0))
                  && step("waitForMoveFinished(X)", dev.waitForMoveFinished(Channel::X_CHANNEL, seconds(30)))

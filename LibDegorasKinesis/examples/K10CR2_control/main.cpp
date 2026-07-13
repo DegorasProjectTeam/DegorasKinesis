@@ -74,10 +74,15 @@ int main()
     if (!step("doConnect", dev.doConnect()))
         return 1;
 
-    // 3) Enable + home (establishes the zero datum). Works regardless of the unit profile.
-    bool ok = step("doEnable(X)", dev.doEnable(Channel::X_CHANNEL, true))
-           && step("doHome(X)", dev.doHome(Channel::X_CHANNEL))
-           && step("waitForHomed", dev.waitForHomed(seconds(60)));
+    // 3) Enable, then establish a known idle state before homing. The Kinesis Simulator keeps each device's motion
+    //    state across connections (and a profiled stop is still decelerating when the previous run closed), so a
+    //    fresh connection can find the device "in motion", which makes Home fail; a stop + short settle avoids that.
+    //    Home then establishes the zero datum. Works regardless of the unit profile.
+    bool ok = step("doEnable(X)", dev.doEnable(Channel::X_CHANNEL, true));
+    dev.doStop(Channel::X_CHANNEL, StopMode::IMMEDIATE);
+    dev.waitForMoveFinished(seconds(5));
+    ok = ok && step("doHome(X)", dev.doHome(Channel::X_CHANNEL))
+            && step("waitForHomed", dev.waitForHomed(seconds(60)));
 
     // 4) Move + read, in whichever unit is available.
     if (dev.hasRealUnits())

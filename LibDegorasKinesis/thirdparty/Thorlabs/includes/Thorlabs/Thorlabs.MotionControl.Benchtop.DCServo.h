@@ -154,7 +154,7 @@ extern "C"
 	} MOT_LimitsSoftwareApproachPolicy;
 
 	/// <summary> Values that represent the Encoder PID Loop modes. </summary>
-    typedef enum MOT_PID_LoopMode : WORD
+	typedef enum MOT_PID_LoopMode : WORD
 	{
 		MOT_PIDLoopModeDisabled = 0x00,///<Disabled or Undefined
 		MOT_PIDOpenLoopMode = 0x01,///<Encoder is in open loop mode
