@@ -130,6 +130,10 @@ public:
     /// @brief Enumerate the serial numbers of connected M30XY controllers.
     static types::OperationResult getDeviceList(types::ThorlabsSNList& list);
 
+    /// @brief Whether @p serial belongs to a M30XY (Thorlabs type id 101). Pure prefix check;
+    ///        contacts no device. Useful to validate a user-supplied serial before doConnect().
+    static bool isCompatibleSerial(const types::ThorlabsSN& serial);
+
 private:
 
     dcservo::DCServoChannel& channelFor(types::Channel ch);

@@ -424,6 +424,11 @@ OperationResult M30X::getDeviceList(ThorlabsSNList& list)
     return kinesis::enumerateByTypeId(kM30XThorlabsID, list);
 }
 
+bool M30X::isCompatibleSerial(const ThorlabsSN& serial)
+{
+    return kinesis::serialMatchesTypeId(serial, kM30XThorlabsID);
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 } // END NAMESPACES

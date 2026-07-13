@@ -28,11 +28,14 @@
 // PROJECT INCLUDES
 #include "LibDegorasKinesis/DCServo/dcservo_channel.h"
 #include "LibDegorasKinesis/Kinesis/kinesis_error.h"
+#include "LibDegorasKinesis/Kinesis/kinesis_discovery.h"
+#include <LibDegorasKinesis/Modules/Devices>
 
 
 using namespace dpkin::types;
 using dpkin::dcservo::DCServoChannel;
 using dpkin::kinesis::categoryFromKinesis;
+using dpkin::kinesis::serialMatchesTypeId;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // No-hardware self-check for the Layer-2 adapter (milestone M4): FT_*->OperationResult mapping and channel binding.
@@ -79,6 +82,32 @@ void testChannelBinding()
     assert(y.channel() == Channel::Y_CHANNEL);
 }
 
+void testSerialTypeId()
+{
+    // Prefix match against a known type id (Thorlabs serials begin with the device type id).
+    assert(serialMatchesTypeId("55000002", 55));     // K10CR2
+    assert(serialMatchesTypeId("105000002", 105));   // M30X
+    assert(serialMatchesTypeId("101000002", 101));   // M30XY
+
+    // Wrong / cross type: 101 and 105 must not cross-match despite sharing a leading digit.
+    assert(!serialMatchesTypeId("105000002", 55));
+    assert(!serialMatchesTypeId("101000002", 105));
+    assert(!serialMatchesTypeId("105000002", 101));
+
+    // Malformed: non-digits, empty, type-id with no unit number, non-positive type id.
+    assert(!serialMatchesTypeId("55ABCDEF", 55));
+    assert(!serialMatchesTypeId("", 55));
+    assert(!serialMatchesTypeId("55", 55));
+    assert(!serialMatchesTypeId("55000002", 0));
+
+    // Device-level convenience forwards to the correct type id.
+    assert(dpkin::K10CR2::isCompatibleSerial("55000002"));
+    assert(!dpkin::K10CR2::isCompatibleSerial("105000002"));
+    assert(dpkin::M30X::isCompatibleSerial("105000002"));
+    assert(dpkin::M30XY::isCompatibleSerial("101000002"));
+    assert(!dpkin::M30XY::isCompatibleSerial("105000002"));
+}
+
 } // namespace
 
 int main()
@@ -86,6 +115,7 @@ int main()
     testKinesisCodeMapping();
     testDeviceErrorCarriesRawCode();
     testChannelBinding();
+    testSerialTypeId();
 
     std::cout << "UT_DCServoMapping: ALL CHECKS PASSED" << std::endl;
     return 0;

@@ -50,7 +50,8 @@ bool step(const std::string& name, OperationResult result)
 }
 }
 
-int main()
+// Usage: Example_M30XY_control [serial]   (serial defaults to the first discovered M30XY, e.g. sim 101000002).
+int main(int argc, char** argv)
 {
     using namespace std::chrono;
 
@@ -58,17 +59,32 @@ int main()
     KinesisSimulatorSession sim;
     std::cout << "Kinesis simulator: " << toString(sim.result()) << "\n";
 
-    // 1) Discover the M30XY controller(s).
-    types::ThorlabsSNList serials;
-    if (!step("getDeviceList", M30XY::getDeviceList(serials)) || serials.empty())
+    // 1) Resolve the target serial: the command-line one (validated against the M30XY type id), else the first
+    //    discovered M30XY.
+    std::string serial;
+    if (argc > 1)
     {
-        std::cout << "No M30XY device found.\n";
-        return 1;
+        serial = argv[1];
+        if (!M30XY::isCompatibleSerial(serial))
+        {
+            std::cout << "Serial '" << serial << "' is not an M30XY (Thorlabs type 101).\n";
+            return 1;
+        }
     }
-    std::cout << "Connecting to " << serials.front() << "\n";
+    else
+    {
+        types::ThorlabsSNList serials;
+        if (!step("getDeviceList", M30XY::getDeviceList(serials)) || serials.empty())
+        {
+            std::cout << "No M30XY found. Pass a serial to target a specific unit, e.g. Example_M30XY_control 101000002\n";
+            return 1;
+        }
+        serial = serials.front();
+    }
+    std::cout << "Connecting to " << serial << "\n";
 
     // 2) Open + initialise both axes. No device I/O in the constructor.
-    M30XY dev(serials.front());
+    M30XY dev(serial);
     const OperationResult conn = dev.doConnect();
     if (!step("doConnect", conn))
     {

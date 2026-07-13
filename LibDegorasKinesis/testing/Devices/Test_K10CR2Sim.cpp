@@ -48,7 +48,8 @@ using dpkin::types::StopMode;
 // wrong value. If a profile IS present (real hardware), the degree-based path is exercised too.
 // ---------------------------------------------------------------------------------------------------------------------
 
-int main()
+// Usage: Test_K10CR2Sim [serial]   (serial defaults to the first discovered K10CR2, e.g. sim 55000002).
+int main(int argc, char** argv)
 {
     using namespace std::chrono;
 
@@ -62,13 +63,27 @@ int main()
 
     types::ThorlabsSNList list;
     assert(K10CR2::getDeviceList(list) == OperationResult::OPERATION_OK);
-    if (list.empty())
+
+    // Target the serial given on the command line (validated against the K10CR2 type id), else the first discovered.
+    std::string serial;
+    if (argc > 1)
+    {
+        serial = argv[1];
+        if (!K10CR2::isCompatibleSerial(serial))
+        {
+            std::cout << "SKIP: serial '" << serial << "' is not a K10CR2 (type 55).\n";
+            return 0;
+        }
+    }
+    else if (!list.empty())
+    {
+        serial = list.front();
+    }
+    else
     {
         std::cout << "SKIP: no virtual K10CR2 (type 55) configured in the simulator.\n";
         return 0;
     }
-
-    const std::string serial = list.front();
     std::cout << "using K10CR2 serial: " << serial << "\n";
 
     K10CR2 dev(serial);

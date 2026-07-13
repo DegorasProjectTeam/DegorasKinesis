@@ -23,6 +23,7 @@
 
 // C++ INCLUDES
 #include <mutex>
+#include <string>
 #include <windows.h>
 
 // THORLABS INCLUDES
@@ -93,6 +94,27 @@ OperationResult enumerateByTypeId(int type_id, ThorlabsSNList& list)
 
     SafeArrayDestroy(arr);
     return OperationResult::OPERATION_OK;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+bool serialMatchesTypeId(const ThorlabsSN& serial, int type_id)
+{
+    if (type_id <= 0)
+        return false;
+
+    const std::string prefix = std::to_string(type_id);
+
+    // Must be the type-id digits followed by at least one unit digit.
+    if (serial.size() <= prefix.size())
+        return false;
+
+    // A Thorlabs serial is all digits.
+    for (const char c : serial)
+        if (c < '0' || c > '9')
+            return false;
+
+    return serial.compare(0, prefix.size(), prefix) == 0;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

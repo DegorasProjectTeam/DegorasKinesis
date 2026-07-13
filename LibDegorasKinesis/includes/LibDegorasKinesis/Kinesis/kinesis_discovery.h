@@ -45,6 +45,19 @@ namespace kinesis
  */
 LIBDEGORASKINESIS_EXPORT types::OperationResult enumerateByTypeId(int type_id, types::ThorlabsSNList& list);
 
+/**
+ * @brief Whether a Thorlabs serial number belongs to a given Kinesis device type id.
+ * @param serial  The serial number to check.
+ * @param type_id The Kinesis device type id (e.g. 55 for K10CR2, 101 for M30XY, 105 for M30X).
+ * @return true if @p serial is all digits and begins with the decimal digits of @p type_id followed by at least one
+ *         more digit (the unit number); false otherwise.
+ * @details Thorlabs serial numbers begin with the device type id (e.g. "55000002" is a type-55 K10CR2). Because type
+ *          ids have different digit lengths, the type cannot be parsed unambiguously from a serial in isolation, so
+ *          this validates a serial against a KNOWN type id by prefix rather than parsing one out. Pure string check:
+ *          it contacts no device and is safe to call before connecting.
+ */
+LIBDEGORASKINESIS_EXPORT bool serialMatchesTypeId(const types::ThorlabsSN& serial, int type_id);
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 }} // END NAMESPACES

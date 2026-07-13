@@ -162,8 +162,10 @@ int main()
 
 The single-axis `M30X` and the rotation-stage `K10CR2` are used the same way with one channel
 (`Channel::X_CHANNEL`); a non-existent channel returns `OperationResult::INVALID_CHANNEL`. For the K10CR2,
-positions and distances are in **degrees** rather than millimetres. See the `examples/` directory for
-complete programs (including `rotation_stage_control` for the K10CR2).
+positions and distances are in **degrees** rather than millimetres. `Device::isCompatibleSerial(serial)` checks
+whether a serial number belongs to that device type (Thorlabs serials begin with the device type id). See the
+`examples/` directory for complete programs (`M30X_control`, `M30XY_control`, `K10CR2_control`); each accepts an
+optional device serial on the command line and otherwise uses the first discovered device of that type.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -178,10 +180,11 @@ There is no test-framework dependency: the `testing/` executables are plain `ass
 device-specific `M30X_control`, `M30XY_control`, `K10CR2_control`. Everything runs from `build/<preset>/bin/`.
 
 * `UT_*` — vocabulary/error mapping, status decode, the status poller, and JSON round-trip. No hardware.
-* `Test_M30XYSim` / `Test_M30XSim` / `Test_K10CR2Sim` — full SDK round-trip against the Kinesis Simulator
-  (serial `55000002` for the K10CR2); self-skip if absent.
+* `Test_M30XYSim` / `Test_M30XSim` / `Test_K10CR2Sim [serial]` — full SDK round-trip against the Kinesis Simulator
+  (serial `55000002` for the K10CR2); each optionally takes a device serial, else uses the first discovered;
+  self-skip if absent.
 * `Test_Concurrency` — same-serial aliasing and two-device concurrent stress.
-* `Test_M30XYMonitor [seconds]` / `Test_K10CR2Monitor [seconds]` — connect and continuously print decoded status
+* `Test_M30XYMonitor [seconds] [serial]` / `Test_K10CR2Monitor [seconds] [serial]` — connect and continuously print decoded status
   while running a scripted home / jog / move sequence; you can also drive the stage manually in the simulator and
   watch it evolve.
 * `Test_M30XYHardware` — gated behind `--i-have-hardware`; conservative moves only. Read its safety notice

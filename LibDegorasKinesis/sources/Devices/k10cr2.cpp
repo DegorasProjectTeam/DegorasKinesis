@@ -424,6 +424,11 @@ OperationResult K10CR2::getDeviceList(ThorlabsSNList& list)
     return kinesis::enumerateByTypeId(kK10CR2ThorlabsID, list);
 }
 
+bool K10CR2::isCompatibleSerial(const ThorlabsSN& serial)
+{
+    return kinesis::serialMatchesTypeId(serial, kK10CR2ThorlabsID);
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 } // END NAMESPACES

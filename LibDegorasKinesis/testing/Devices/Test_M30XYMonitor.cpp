@@ -48,7 +48,7 @@ using dpkin::types::TravelDirection;
 // commanded motion is visible in the Kinesis Simulator window. After the scripted part it keeps monitoring for the
 // rest of the requested duration, so the stage can also be driven MANUALLY in the simulator and watched here.
 //
-// Usage: Test_M30XYMonitor [seconds]   (default 30). This is an observational tool, not an assert-based test.
+// Usage: Test_M30XYMonitor [seconds] [serial]   (defaults: 30 s; first discovered M30XY). Observational tool.
 // ---------------------------------------------------------------------------------------------------------------------
 
 namespace
@@ -85,15 +85,31 @@ int main(int argc, char** argv)
     KinesisSimulatorSession sim;
     line(std::string("simulator session: ") + toString(sim.result()));
 
-    types::ThorlabsSNList list;
-    if (M30XY::getDeviceList(list) != OperationResult::OPERATION_OK || list.empty())
+    // Target the serial given as the 2nd argument (validated against the M30XY type id), else the first discovered.
+    std::string serial;
+    if (argc > 2)
     {
-        line("No M30XY found. Open the Kinesis Simulator with a virtual M30XY (type 101) and retry.");
-        return 0;
+        serial = argv[2];
+        if (!M30XY::isCompatibleSerial(serial))
+        {
+            line("Serial '" + serial + "' is not an M30XY (type 101).");
+            return 0;
+        }
+    }
+    else
+    {
+        types::ThorlabsSNList list;
+        if (M30XY::getDeviceList(list) != OperationResult::OPERATION_OK || list.empty())
+        {
+            line("No M30XY found. Open the Kinesis Simulator with a virtual M30XY (type 101), or pass a serial as "
+                 "the 2nd argument.");
+            return 0;
+        }
+        serial = list.front();
     }
 
-    M30XY dev(list.front());
-    line("Connecting to M30XY " + list.front() + " ...");
+    M30XY dev(serial);
+    line("Connecting to M30XY " + serial + " ...");
     if (dev.doConnect() != OperationResult::OPERATION_OK)
     {
         line("Connect failed.");

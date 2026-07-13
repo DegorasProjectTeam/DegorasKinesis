@@ -51,7 +51,7 @@ using dpkin::types::TravelDirection;
 // If a stage/settings profile is loaded the angle is shown in DEGREES and the scripted moves are in degrees; if not
 // (the simulator default), the tool warns, shows raw motor COUNTS, and issues the scripted moves in device units.
 //
-// Usage: Test_K10CR2Monitor [seconds]   (default 30). This is an observational tool, not an assert-based test.
+// Usage: Test_K10CR2Monitor [seconds] [serial]   (defaults: 30 s; first discovered K10CR2). Observational tool.
 // ---------------------------------------------------------------------------------------------------------------------
 
 namespace
@@ -89,15 +89,31 @@ int main(int argc, char** argv)
     KinesisSimulatorSession sim;
     line(std::string("simulator session: ") + toString(sim.result()));
 
-    types::ThorlabsSNList list;
-    if (K10CR2::getDeviceList(list) != OperationResult::OPERATION_OK || list.empty())
+    // Target the serial given as the 2nd argument (validated against the K10CR2 type id), else the first discovered.
+    std::string serial;
+    if (argc > 2)
     {
-        line("No K10CR2 found. Open the Kinesis Simulator with a virtual K10CR2 (type 55) and retry.");
-        return 0;
+        serial = argv[2];
+        if (!K10CR2::isCompatibleSerial(serial))
+        {
+            line("Serial '" + serial + "' is not a K10CR2 (type 55).");
+            return 0;
+        }
+    }
+    else
+    {
+        types::ThorlabsSNList list;
+        if (K10CR2::getDeviceList(list) != OperationResult::OPERATION_OK || list.empty())
+        {
+            line("No K10CR2 found. Open the Kinesis Simulator with a virtual K10CR2 (type 55), or pass a serial as "
+                 "the 2nd argument.");
+            return 0;
+        }
+        serial = list.front();
     }
 
-    K10CR2 dev(list.front());
-    line("Connecting to K10CR2 " + list.front() + " ...");
+    K10CR2 dev(serial);
+    line("Connecting to K10CR2 " + serial + " ...");
     const OperationResult conn = dev.doConnect();
     if (conn != OperationResult::OPERATION_OK)
     {

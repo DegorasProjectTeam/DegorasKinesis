@@ -53,24 +53,41 @@ bool step(const std::string& name, OperationResult result)
 }
 }
 
-int main()
+// Usage: Example_K10CR2_control [serial]   (serial defaults to the first discovered K10CR2, e.g. sim 55000002).
+int main(int argc, char** argv)
 {
     using namespace std::chrono;
 
     KinesisSimulatorSession sim;
     std::cout << "Kinesis simulator: " << toString(sim.result()) << "\n";
 
-    // 1) Discover.
-    types::ThorlabsSNList serials;
-    if (!step("getDeviceList", K10CR2::getDeviceList(serials)) || serials.empty())
+    // 1) Resolve the target serial: the one given on the command line (validated against the K10CR2 type id),
+    //    otherwise the first discovered K10CR2.
+    std::string serial;
+    if (argc > 1)
     {
-        std::cout << "No K10CR2 device found (expected simulator serial 55000002).\n";
-        return 1;
+        serial = argv[1];
+        if (!K10CR2::isCompatibleSerial(serial))
+        {
+            std::cout << "Serial '" << serial << "' is not a K10CR2 (Thorlabs type 55).\n";
+            return 1;
+        }
     }
-    std::cout << "Connecting to " << serials.front() << "\n";
+    else
+    {
+        types::ThorlabsSNList serials;
+        if (!step("getDeviceList", K10CR2::getDeviceList(serials)) || serials.empty())
+        {
+            std::cout << "No K10CR2 found. Pass a serial to target a specific unit, "
+                         "e.g. Example_K10CR2_control 55000002\n";
+            return 1;
+        }
+        serial = serials.front();
+    }
+    std::cout << "Connecting to " << serial << "\n";
 
     // 2) Connect + initialise. No device I/O in the constructor.
-    K10CR2 dev(serials.front());
+    K10CR2 dev(serial);
     if (!step("doConnect", dev.doConnect()))
         return 1;
 

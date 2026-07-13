@@ -48,7 +48,8 @@ using dpkin::types::StopMode;
 // value. If a profile IS present (e.g. real hardware), the mm-based path is exercised too.
 // ---------------------------------------------------------------------------------------------------------------------
 
-int main()
+// Usage: Test_M30XSim [serial]   (serial defaults to the first discovered M30X, e.g. sim 105000002).
+int main(int argc, char** argv)
 {
     using namespace std::chrono;
 
@@ -62,13 +63,27 @@ int main()
 
     types::ThorlabsSNList list;
     assert(M30X::getDeviceList(list) == OperationResult::OPERATION_OK);
-    if (list.empty())
+
+    // Target the serial given on the command line (validated against the M30X type id), else the first discovered.
+    std::string serial;
+    if (argc > 1)
+    {
+        serial = argv[1];
+        if (!M30X::isCompatibleSerial(serial))
+        {
+            std::cout << "SKIP: serial '" << serial << "' is not an M30X (type 105).\n";
+            return 0;
+        }
+    }
+    else if (!list.empty())
+    {
+        serial = list.front();
+    }
+    else
     {
         std::cout << "SKIP: no virtual M30X (type 105) configured in the simulator.\n";
         return 0;
     }
-
-    const std::string serial = list.front();
     std::cout << "using M30X serial: " << serial << "\n";
 
     M30X dev(serial);

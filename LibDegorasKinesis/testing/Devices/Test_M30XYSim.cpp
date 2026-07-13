@@ -49,7 +49,8 @@ using dpkin::types::StopMode;
 // position is logged instead. On real hardware the logged position should reach the commanded target.
 // ---------------------------------------------------------------------------------------------------------------------
 
-int main()
+// Usage: Test_M30XYSim [serial]   (serial defaults to the first discovered M30XY, e.g. sim 101000002).
+int main(int argc, char** argv)
 {
     using namespace std::chrono;
 
@@ -63,13 +64,27 @@ int main()
 
     types::ThorlabsSNList list;
     assert(M30XY::getDeviceList(list) == OperationResult::OPERATION_OK);
-    if (list.empty())
+
+    // Target the serial given on the command line (validated against the M30XY type id), else the first discovered.
+    std::string serial;
+    if (argc > 1)
+    {
+        serial = argv[1];
+        if (!M30XY::isCompatibleSerial(serial))
+        {
+            std::cout << "SKIP: serial '" << serial << "' is not an M30XY (type 101).\n";
+            return 0;
+        }
+    }
+    else if (!list.empty())
+    {
+        serial = list.front();
+    }
+    else
     {
         std::cout << "SKIP: no virtual M30XY (type 101) configured in the simulator.\n";
         return 0;
     }
-
-    const std::string serial = list.front();
     std::cout << "using M30XY serial: " << serial << "\n";
 
     M30XY dev(serial);

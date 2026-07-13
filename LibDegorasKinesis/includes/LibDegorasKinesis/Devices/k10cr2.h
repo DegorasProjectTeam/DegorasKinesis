@@ -125,6 +125,10 @@ public:
     /// @brief Enumerate the serial numbers of connected K10CR2 controllers.
     static types::OperationResult getDeviceList(types::ThorlabsSNList& list);
 
+    /// @brief Whether @p serial belongs to a K10CR2 (Thorlabs type id 55). Pure prefix check;
+    ///        contacts no device. Useful to validate a user-supplied serial before doConnect().
+    static bool isCompatibleSerial(const types::ThorlabsSN& serial);
+
 private:
 
     /// @brief OPERATION_OK if @p ch is this device's only axis, otherwise INVALID_CHANNEL.

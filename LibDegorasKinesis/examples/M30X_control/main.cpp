@@ -52,22 +52,38 @@ bool step(const std::string& name, OperationResult result)
 }
 }
 
-int main()
+// Usage: Example_M30X_control [serial]   (serial defaults to the first discovered M30X).
+int main(int argc, char** argv)
 {
     using namespace std::chrono;
 
     KinesisSimulatorSession sim;
     std::cout << "Kinesis simulator: " << toString(sim.result()) << "\n";
 
-    types::ThorlabsSNList serials;
-    if (!step("getDeviceList", M30X::getDeviceList(serials)) || serials.empty())
+    // Resolve the target serial: the command-line one (validated against the M30X type id), else the first discovered.
+    std::string serial;
+    if (argc > 1)
     {
-        std::cout << "No M30X device found.\n";
-        return 1;
+        serial = argv[1];
+        if (!M30X::isCompatibleSerial(serial))
+        {
+            std::cout << "Serial '" << serial << "' is not an M30X (Thorlabs type 105).\n";
+            return 1;
+        }
     }
-    std::cout << "Connecting to " << serials.front() << "\n";
+    else
+    {
+        types::ThorlabsSNList serials;
+        if (!step("getDeviceList", M30X::getDeviceList(serials)) || serials.empty())
+        {
+            std::cout << "No M30X found. Pass a serial to target a specific unit, e.g. Example_M30X_control 105000002\n";
+            return 1;
+        }
+        serial = serials.front();
+    }
+    std::cout << "Connecting to " << serial << "\n";
 
-    M30X dev(serials.front());            // no device I/O in the constructor
+    M30X dev(serial);                     // no device I/O in the constructor
     if (!step("doConnect", dev.doConnect()))
         return 1;
 
