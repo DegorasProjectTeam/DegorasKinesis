@@ -208,6 +208,17 @@ KinesisSimulatorSession::~KinesisSimulatorSession()
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+KinesisSimulatorResult KinesisSimulatorSession::result() const
+{
+    return this->result_;
+}
+
+bool KinesisSimulatorSession::usable() const
+{
+    return this->result_ == KinesisSimulatorResult::OK ||
+           this->result_ == KinesisSimulatorResult::ALREADY_CONNECTED;
+}
+
 }} // END NAMESPACES
 
 // ---------------------------------------------------------------------------------------------------------------------

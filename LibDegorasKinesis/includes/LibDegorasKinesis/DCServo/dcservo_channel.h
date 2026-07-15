@@ -64,8 +64,8 @@ public:
 
     DCServoChannel(types::ThorlabsSN serial, types::Channel channel);
 
-    types::ThorlabsSN serialNo() const { return this->serial_; }
-    types::Channel channel() const { return this->channel_; }
+    types::ThorlabsSN serialNo() const;
+    types::Channel channel() const;
 
     // -- Controller-scoped lifecycle (channel-independent; call on one channel only for a multi-axis device) --
     types::DeviceError open();                       ///< Build device list + BDC_Open (FT_DeviceNotFound -> DEVICE_NOT_FOUND).

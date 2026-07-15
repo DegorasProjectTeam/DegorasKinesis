@@ -328,6 +328,11 @@ DeviceError IntStepperController::realToDevice(PhysicalUnit unit, double real, i
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+types::ThorlabsSN IntStepperController::serialNo() const
+{
+    return this->serial_;
+}
+
 }} // END NAMESPACES
 
 // ---------------------------------------------------------------------------------------------------------------------

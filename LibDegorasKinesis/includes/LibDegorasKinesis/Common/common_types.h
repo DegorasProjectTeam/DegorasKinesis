@@ -159,7 +159,7 @@ struct LIBDEGORASKINESIS_EXPORT DeviceError
     std::string context;                                        ///< Human context, e.g. "BDC_Home(ch=1)".
 
     /// @brief True when the operation succeeded.
-    bool ok() const { return this->category == OperationResult::OPERATION_OK; }
+    bool ok() const;
 
     /// @brief Human-readable form: "<category>: kinesis=<code> (<context>)".
     std::string toString() const;

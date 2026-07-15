@@ -101,14 +101,10 @@ public:
     KinesisSimulatorSession& operator=(KinesisSimulatorSession&&) = delete;
 
     /// @brief The result of the connect attempt made at construction.
-    KinesisSimulatorResult result() const { return this->result_; }
+    KinesisSimulatorResult result() const;
 
     /// @brief True if the simulator API is usable for this process (freshly connected or already connected).
-    bool usable() const
-    {
-        return this->result_ == KinesisSimulatorResult::OK ||
-               this->result_ == KinesisSimulatorResult::ALREADY_CONNECTED;
-    }
+    bool usable() const;
 
 private:
 

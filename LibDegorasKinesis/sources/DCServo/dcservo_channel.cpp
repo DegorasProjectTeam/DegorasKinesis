@@ -330,6 +330,16 @@ DeviceError DCServoChannel::realToDevice(PhysicalUnit unit, double real, int& ou
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+types::ThorlabsSN DCServoChannel::serialNo() const
+{
+    return this->serial_;
+}
+
+types::Channel DCServoChannel::channel() const
+{
+    return this->channel_;
+}
+
 }} // END NAMESPACES
 
 // ---------------------------------------------------------------------------------------------------------------------

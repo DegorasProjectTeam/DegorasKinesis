@@ -65,7 +65,7 @@ public:
 
     explicit IntStepperController(types::ThorlabsSN serial);
 
-    types::ThorlabsSN serialNo() const { return this->serial_; }
+    types::ThorlabsSN serialNo() const;
 
     // -- Controller-scoped lifecycle --
     types::DeviceError open();                       ///< Build device list + ISC_Open (FT_DeviceNotFound -> DEVICE_NOT_FOUND).

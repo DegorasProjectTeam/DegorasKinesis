@@ -64,10 +64,10 @@ struct LIBDEGORASKINESIS_EXPORT MotorStatusFlags
     std::array<bool, 6> digital_in{};   ///< Digital inputs 1-6 (0x00100000 .. 0x02000000, bits 20-25).
 
     /// @brief True if the shaft is moving in either direction.
-    bool isMoving() const { return this->moving_cw || this->moving_ccw; }
+    bool isMoving() const;
 
     /// @brief True if the shaft is jogging in either direction.
-    bool isJogging() const { return this->jogging_cw || this->jogging_ccw; }
+    bool isJogging() const;
 
     /// @brief Serialise the flags and digital inputs to a JSON object string (pretty-printed when @p pretty is true).
     std::string toJsonStr(bool pretty = false) const;

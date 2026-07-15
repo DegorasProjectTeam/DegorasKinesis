@@ -145,6 +145,16 @@ MotorStatusFlags MotorStatusFlags::fromJsonStr(const std::string& json_str)
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+bool MotorStatusFlags::isMoving() const
+{
+    return this->moving_cw || this->moving_ccw;
+}
+
+bool MotorStatusFlags::isJogging() const
+{
+    return this->jogging_cw || this->jogging_ccw;
+}
+
 }} // END NAMESPACES
 
 // ---------------------------------------------------------------------------------------------------------------------
