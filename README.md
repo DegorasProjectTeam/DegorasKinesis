@@ -200,7 +200,7 @@ device-specific `M30X_control`, `M30XY_control`, `K10CR2_control`. Everything ru
 <!-- ROADMAP -->
 ## Roadmap
 
-- [ ] Install rules + a CMake package config (`find_package(LibDegorasKinesis)`) for external consumption.
+- [x] Install/export + CMake package config (`find_package(DegorasKinesis)` → `Degoras::Kinesis`) and a vcpkg overlay port. See [`docs/PACKAGING.md`](LibDegorasKinesis/docs/PACKAGING.md).
 - [x] Integrated Stepper Motors module (K10CR2/M rotation stage) as the `IntStepper/` Layer-2 adapter.
 - [ ] Further Kinesis device families (e.g. KCube / brushless) as new Layer-2 adapters, reusing the shared `Kinesis/` layer.
 - [ ] Migrate the generic, project-agnostic infrastructure (status poller, wait helper, JSON utilities) into
@@ -231,7 +231,6 @@ Degoras Project Team — Spanish Navy Observatory SLR station (SFEL), San Fernan
 
 * [Thorlabs Kinesis](https://www.thorlabs.com/software_pages/ViewSoftwarePage.cfm?Code=Motion_Control) — the underlying motion-control SDK.
 * Real Instituto y Observatorio de la Armada (ROA) and the SFEL SLR station, San Fernando.
-* [LibDegorasBase](https://github.com/DegorasProjectTeam/LibDegorasBase) — Degoras Project base library and conventions.
 * [Best-README-Template](https://github.com/othneildrew/Best-README-Template).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

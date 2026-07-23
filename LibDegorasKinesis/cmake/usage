@@ -1,0 +1,14 @@
+The package degoraskinesis provides CMake targets:
+
+    find_package(DegorasKinesis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Degoras::Kinesis)
+
+Runtime requirement: this library controls Thorlabs Kinesis motion devices and depends on the proprietary,
+Windows-only Thorlabs Kinesis SDK. The Thorlabs *.dll files must be discoverable at run time (install the Thorlabs
+Kinesis software, or keep the DLLs on PATH / next to your executable).
+
+ABI note: the public API passes C++ standard-library types across the library boundary, so consumers MUST use a
+MinGW/UCRT64 toolchain compatible with the one the library was built with.
+
+Static builds only: the Thorlabs import libraries must also be locatable at link time. Set THORLABS_KINESIS_ROOT
+(CMake or environment variable) to the SDK root if it is not auto-detected.
