@@ -8,7 +8,7 @@
 
 <!-- PROJECT TITLE -->
 <div align="center">
-  <h1 align="center">LibDegorasKinesis</h1>
+  <h1 align="center">DegorasKinesis</h1>
 
   <p align="center">
     An extensible C++17 library for controlling Thorlabs Kinesis motion devices.
@@ -18,9 +18,9 @@
     <br />
     <a href="#usage">View Usage</a>
     &middot;
-    <a href="https://github.com/DegorasProjectTeam/LibDegorasKinesis/issues">Report Bug</a>
+    <a href="https://github.com/DegorasProjectTeam/DegorasKinesis/issues">Report Bug</a>
     &middot;
-    <a href="https://github.com/DegorasProjectTeam/LibDegorasKinesis/issues">Request Feature</a>
+    <a href="https://github.com/DegorasProjectTeam/DegorasKinesis/issues">Request Feature</a>
   </p>
 </div>
 
@@ -54,7 +54,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-LibDegorasKinesis is a production-quality, extensible C++17 library for controlling Thorlabs Kinesis
+DegorasKinesis is a production-quality, extensible C++17 library for controlling Thorlabs Kinesis
 motion devices. It grows out of a validated proof of concept (the M30X / M30XY benchtop DC servo
 drivers) and is rebuilt as a reusable library that additional Kinesis device families can join without
 architectural changes.
@@ -81,8 +81,8 @@ layers unchanged.
 Within Layer 1: `Global/` holds the export macro, `Common/` the motion vocabulary and result/error model, and
 `Helpers/` the generic infrastructure. The shared `Kinesis/` layer holds the module-agnostic Kinesis plumbing
 reused by every adapter (the status word is identical across the DC-servo and integrated-stepper modules).
-Headers are consumed individually as `#include "LibDegorasKinesis/<Folder>/<file>.h"`, or a whole group via a
-module aggregator: `#include <LibDegorasKinesis/Modules/Devices>` (also `Common`, `Helpers`, `Kinesis`,
+Headers are consumed individually as `#include "DegorasKinesis/<Folder>/<file>.h"`, or a whole group via a
+module aggregator: `#include <DegorasKinesis/Modules/Devices>` (also `Common`, `Helpers`, `Kinesis`,
 `DCServo`, `IntStepper`).
 
 ### Built With
@@ -106,17 +106,17 @@ module aggregator: `#include <LibDegorasKinesis/Modules/Devices>` (also `Common`
 
 ### Build
 
-The CMake project root is the inner `LibDegorasKinesis/` directory. Configure and build with a preset:
+The CMake project root is the inner `DegorasKinesis/` directory. Configure and build with a preset:
 
 ```sh
-cd LibDegorasKinesis
+cd DegorasKinesis
 cmake --preset local-mingw-dynamic-deb
 cmake --build --preset local-mingw-dynamic-deb
 ```
 
 Project presets in `CMakePresets.json` cover `mingw-{dynamic,static}-{deb,rel}`; the `local-*` user presets
-just add your `MINGW_ROOT`. Build options: `LIBDEGORASKINESIS_BUILD_SHARED` (default ON),
-`LIBDEGORASKINESIS_BUILD_TESTING`, `LIBDEGORASKINESIS_BUILD_EXAMPLES`.
+just add your `MINGW_ROOT`. Build options: `DEGORASKINESIS_BUILD_SHARED` (default ON),
+`DEGORASKINESIS_BUILD_TESTING`, `DEGORASKINESIS_BUILD_EXAMPLES`.
 
 Artifacts land in `build/<preset>/bin/` at the repository root. The build stages, next to the binaries,
 both the vendored Thorlabs DLLs and the MinGW C++ runtime (`libstdc++-6.dll`, `libgcc_s_seh-1.dll`,
@@ -128,8 +128,8 @@ both the vendored Thorlabs DLLs and the MinGW C++ runtime (`libstdc++-6.dll`, `l
 ## Usage
 
 ```cpp
-#include <LibDegorasKinesis/Modules/Kinesis>   // KinesisSimulatorSession
-#include <LibDegorasKinesis/Modules/Devices>   // M30XY, K10CR2, IMotionDevice, status types
+#include <DegorasKinesis/Modules/Kinesis>   // KinesisSimulatorSession
+#include <DegorasKinesis/Modules/Devices>   // M30XY, K10CR2, IMotionDevice, status types
 
 using namespace dpkin;
 using namespace dpkin::kinesis;                 // KinesisSimulatorSession, discovery, status decode
@@ -174,8 +174,8 @@ optional device serial on the command line and otherwise uses the first discover
 
 There is no test-framework dependency: the `testing/` executables are plain `assert()`-based checks, named
 `UT_*` for hardware-free unit tests and `Test_*` for integration tests (build with
-`LIBDEGORASKINESIS_BUILD_TESTING=ON`). The `examples/` demos (`Example_*`) build with
-`LIBDEGORASKINESIS_BUILD_EXAMPLES=ON`; each is a self-contained subproject (`<name>/CMakeLists.txt` +
+`DEGORASKINESIS_BUILD_TESTING=ON`). The `examples/` demos (`Example_*`) build with
+`DEGORASKINESIS_BUILD_EXAMPLES=ON`; each is a self-contained subproject (`<name>/CMakeLists.txt` +
 `main.cpp`) — the generic `basic_device_discovery`, `basic_device_connection`, `multi_device_control` and the
 device-specific `M30X_control`, `M30XY_control`, `K10CR2_control`. Everything runs from `build/<preset>/bin/`.
 
@@ -200,7 +200,7 @@ device-specific `M30X_control`, `M30XY_control`, `K10CR2_control`. Everything ru
 <!-- ROADMAP -->
 ## Roadmap
 
-- [x] Install/export + CMake package config (`find_package(DegorasKinesis)` → `Degoras::Kinesis`) and a vcpkg overlay port. See [`docs/PACKAGING.md`](LibDegorasKinesis/docs/PACKAGING.md).
+- [x] Install/export + CMake package config (`find_package(DegorasKinesis)` → `Degoras::Kinesis`) and a vcpkg overlay port. See [`docs/PACKAGING.md`](DegorasKinesis/docs/PACKAGING.md).
 - [x] Integrated Stepper Motors module (K10CR2/M rotation stage) as the `IntStepper/` Layer-2 adapter.
 - [ ] Further Kinesis device families (e.g. KCube / brushless) as new Layer-2 adapters, reusing the shared `Kinesis/` layer.
 - [ ] Migrate the generic, project-agnostic infrastructure (status poller, wait helper, JSON utilities) into
