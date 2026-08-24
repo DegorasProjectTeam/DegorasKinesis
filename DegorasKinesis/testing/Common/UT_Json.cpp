@@ -21,6 +21,20 @@
  *  SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+// ASSERTIONS ARE THE POINT OF A TEST, so NDEBUG must not be allowed to delete them. A Release build defines it and
+// assert() then expands to NOTHING AT ALL -- the whole expression, not just the abort, so any call written inside an
+// assert stops happening too. Measured on this suite before the fix: objdump found ZERO references to assert in all
+// nine Release test objects, i.e. every one of the 195 checks was dead, and the suite reported success without
+// evaluating any of them. After the fix the same objects carry 197 references and the suite still passes 9/9 in both
+// configurations -- so nothing had been failing behind the dead layer here; it simply was not being checked.
+//
+// BOTH LINES ARE REQUIRED, in this order, above the first #include. The bare #undef is not enough: if anything has
+// already pulled in <cassert> while NDEBUG was defined, assert is already expanded away and stays dead. Including
+// the header again re-arms it, because assert.h undefines and redefines the macro on every inclusion and <cassert>
+// deliberately has no include guard.
+#undef NDEBUG
+#include <cassert>
+
 // C++ INCLUDES
 #include <cassert>
 #include <cmath>
