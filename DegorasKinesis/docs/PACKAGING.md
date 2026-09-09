@@ -12,7 +12,7 @@ standalone install and a **vcpkg** overlay port. This document covers both.
 ## 1. Standalone install (no vcpkg)
 
 Configure, build and install with the provided presets (they use the bundled MinGW toolchain and require the
-`MINGW_ROOT` environment variable, e.g. `E:/msys64/ucrt64`):
+`DEVSYSTEM_TOOLCHAIN_ROOT` environment variable, e.g. `E:/msys64/ucrt64`):
 
 ```sh
 cd DegorasKinesis
@@ -82,7 +82,7 @@ vcpkg install degoras-kinesis \
 { "dependencies": ["degoras-kinesis"] }
 ```
 …invoked with the same `--overlay-ports` / `--overlay-triplets` (or configured in `vcpkg-configuration.json`), and
-`MINGW_ROOT` exported in the environment.
+`DEVSYSTEM_TOOLCHAIN_ROOT` exported in the environment.
 
 The port runs `vcpkg_cmake_configure` → `vcpkg_cmake_install` → `vcpkg_cmake_config_fixup(PACKAGE_NAME degoraskinesis
 CONFIG_PATH lib/cmake/DegorasKinesis)`, which relocates the CMake package files to `share/degoraskinesis/` and merges

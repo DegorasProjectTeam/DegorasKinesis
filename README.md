@@ -101,7 +101,8 @@ module aggregator: `#include <DegorasKinesis/Modules/Devices>` (also `Common`, `
 
 * An MSYS2 MinGW prefix providing GCC, Ninja and (optionally) windres. UCRT64 is the reference prefix.
 * CMake >= 3.21.
-* The `MINGW_ROOT` environment variable pointing at the prefix (e.g. `E:/msys64/ucrt64`). The provided
+* The `DEVSYSTEM_TOOLCHAIN_ROOT` environment variable pointing at the prefix (e.g. `E:/msys64/ucrt64`).
+  The provided
   `CMakeUserPresets.json` sets this for the local machine — adjust it for yours.
 
 ### Build
@@ -115,7 +116,7 @@ cmake --build --preset local-mingw-dynamic-deb
 ```
 
 Project presets in `CMakePresets.json` cover `mingw-{dynamic,static}-{deb,rel}`; the `local-*` user presets
-just add your `MINGW_ROOT`. Build options: `DEGORASKINESIS_BUILD_SHARED` (default ON),
+just add your `DEVSYSTEM_TOOLCHAIN_ROOT`. Build options: `DEGORASKINESIS_BUILD_SHARED` (default ON),
 `DEGORASKINESIS_BUILD_TESTING`, `DEGORASKINESIS_BUILD_EXAMPLES`.
 
 Artifacts land in `build/<preset>/bin/` at the repository root. The build stages, next to the binaries,
