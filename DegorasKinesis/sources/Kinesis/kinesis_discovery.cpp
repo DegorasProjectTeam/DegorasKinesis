@@ -78,7 +78,7 @@ OperationResult enumerateByTypeId(int type_id, ThorlabsSNList& list)
     for (LONG i = lower; i <= upper; ++i)
     {
         BSTR bstr_serial = nullptr;
-        const HRESULT hr = SafeArrayGetElement(arr, &i, &bstr_serial);
+        const HRESULT hr = SafeArrayGetElement(arr, &i, static_cast<void*>(&bstr_serial));
         if (SUCCEEDED(hr) && bstr_serial != nullptr)
         {
             const int len = WideCharToMultiByte(CP_UTF8, 0, bstr_serial, -1, nullptr, 0, nullptr, nullptr);

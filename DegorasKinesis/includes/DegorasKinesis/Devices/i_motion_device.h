@@ -65,6 +65,28 @@ public:
 
     virtual ~IMotionDevice() = default;
 
+    // THE DOCUMENTED RULE, NOW ENFORCED BY THE COMPILER. The note above says "never copy or slice it", and until
+    // these lines that was a request: declaring only a destructor leaves the copy operations implicitly available,
+    // so `IMotionDevice& a = dev; SomeBase b = a;` sliced an open device handle in two without a diagnostic. The
+    // concrete devices already delete all four (see m30xy.h), but a base class must not depend on its derivatives
+    // to enforce its own contract -- nothing stops a future device from forgetting.
+    //
+    // Deleting rather than protecting: there is no case in this library for copying a device, and a deleted
+    // function gives a clearer error at the call site than an inaccessible one.
+    IMotionDevice(const IMotionDevice&) = delete;
+    IMotionDevice& operator=(const IMotionDevice&) = delete;
+    IMotionDevice(IMotionDevice&&) = delete;
+    IMotionDevice& operator=(IMotionDevice&&) = delete;
+
+protected:
+
+    // Declaring any of the above suppresses the implicit default constructor, so the derived devices stop
+    // compiling until it is put back. PROTECTED rather than public: this is an abstract interface, and only a
+    // derived class has any business constructing the base subobject.
+    IMotionDevice() = default;
+
+public:
+
     /// @brief Serial number of the controller this object targets.
     virtual std::string getSerialNo() const = 0;
 
@@ -99,6 +121,16 @@ public:
 
     /// @brief Move a channel to an absolute position, in real-world units (mm for linear stages, degrees for
     ///        rotation stages), relative to the home datum. Non-blocking.
+    ///
+    /// @warning OPERATION_OK MEANS "THE SDK ACCEPTED THE COMMAND", NOT "THE MOVE HAPPENED", and the two really do
+    ///          come apart. Measured against the Kinesis Simulator: a move commanded while the axis was still
+    ///          homing returned OPERATION_OK here while the device logged
+    ///          "Motor Exception: Simulator is already in motion" and never moved. The Thorlabs SDK does not
+    ///          report that rejection back to the caller, so this layer cannot either.
+    ///
+    ///          To know that a move actually took place, wait for the axis to settle (waitForMoveFinished) and
+    ///          then read the position back (getChannelPosition). And make sure the axis is idle before
+    ///          commanding: a device that is homing or moving silently discards the command.
     virtual types::OperationResult doMoveAbsolute(types::Channel ch, double real_pos) = 0;
 
     /// @brief Move a channel by a relative distance, in real-world units (mm for linear stages, degrees for

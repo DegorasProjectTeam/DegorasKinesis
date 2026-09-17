@@ -129,7 +129,8 @@ public:
 private:
 
     /// @brief OPERATION_OK if @p ch is this device's only axis, otherwise INVALID_CHANNEL.
-    types::OperationResult checkChannel(types::Channel ch) const;
+    /// @brief Validate a channel id against this single-axis device. Static: it reads no member state.
+    static types::OperationResult checkChannel(types::Channel ch);
     types::OperationResult fillChannelStatus(types::M30XChannelStatus& status);
 
     std::string serial_no_;
