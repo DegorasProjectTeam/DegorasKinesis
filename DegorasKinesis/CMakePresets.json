@@ -1,55 +1,136 @@
 {
   "version": 6,
   "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+
+  "vendor": {
+    "org.degoras.readme": [
+      "Presets aligned with DegorasASI, which is the reference layout for the ecosystem. The two projects share",
+      "cmake/toolchains/dp_windows_mingw.cmake and cmake/triplets/ verbatim, so their presets had no business",
+      "disagreeing -- and they did: this file used to define its own 'base' with builds beside the sources, no",
+      "Unix presets and no Qt Creator integration, while ASI had all three.",
+      "",
+      "THE GATE IS THE POINT. Every preset is conditioned on the DEVSYSTEM_* variables the DegorasSLR environment",
+      "exports. Outside that environment 'cmake --list-presets' comes back EMPTY, which looks unhelpful and is",
+      "deliberate: the alternative is a build that silently lands somewhere nobody expects. To build outside it,",
+      "copy CMakeUserPresets.json.example to CMakeUserPresets.json and set the variables there."
+    ]
+  },
+
   "configurePresets": [
     {
-      "name": "base",
+      "name": "devsystem",
       "hidden": true,
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/../build/${presetName}",
+      "binaryDir": "$env{DEVSYSTEM_BUILDTREES}/DegorasKinesis/${presetName}",
+      "installDir": "$env{DEVSYSTEM_DEPLOYS}/DegorasKinesis/$env{VCPKG_DEFAULT_TRIPLET}",
       "cacheVariables": {
         "CMAKE_COLOR_DIAGNOSTICS": "ON",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_FIND_PACKAGE_PREFER_CONFIG": "ON"
       }
     },
+
     {
       "name": "mingw",
       "hidden": true,
-      "inherits": "base",
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "inherits": "devsystem",
+      "condition": {
+        "type": "allOf",
+        "conditions": [
+          { "type": "equals",    "lhs": "${hostSystemName}",              "rhs": "Windows" },
+          { "type": "notEquals", "lhs": "$env{DEVSYSTEM_BUILDTREES}",     "rhs": "" },
+          { "type": "notEquals", "lhs": "$env{DEVSYSTEM_DEPLOYS}",        "rhs": "" },
+          { "type": "notEquals", "lhs": "$env{DEVSYSTEM_TOOLCHAIN_ROOT}", "rhs": "" },
+          { "type": "notEquals", "lhs": "$env{VCPKG_DEFAULT_TRIPLET}",    "rhs": "" }
+        ]
+      },
+      "cmakeExecutable": "$env{DEVSYSTEM_TOOLCHAIN_ROOT}/bin/cmake.exe",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/dp_windows_mingw.cmake"
+      },
+      "environment": {
+        "PATH": "$env{DEVSYSTEM_TOOLCHAIN_ROOT}/bin;$penv{PATH}"
       }
     },
+
+    { "name": "mingw-dynamic", "hidden": true, "inherits": "mingw",
+      "cacheVariables": { "DEGORASKINESIS_BUILD_SHARED": "ON" } },
+    { "name": "mingw-static",  "hidden": true, "inherits": "mingw",
+      "cacheVariables": { "DEGORASKINESIS_BUILD_SHARED": "OFF" } },
+
+    { "name": "mingw-dynamic-deb", "displayName": "MinGW Shared Debug",   "inherits": "mingw-dynamic",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "mingw-dynamic-rel", "displayName": "MinGW Shared Release", "inherits": "mingw-dynamic",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } },
+    { "name": "mingw-static-deb",  "displayName": "MinGW Static Debug",   "inherits": "mingw-static",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "mingw-static-rel",  "displayName": "MinGW Static Release", "inherits": "mingw-static",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } },
+
     {
-      "name": "mingw-dynamic-deb",
-      "displayName": "MinGW Shared Debug",
-      "inherits": "mingw",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "DEGORASKINESIS_BUILD_SHARED": "ON" }
+      "name": "qtcreator-mingw",
+      "hidden": true,
+      "inherits": "mingw-dynamic",
+      "vendor": {
+        "qt.io/QtCreator/1.0": {
+          "AskBeforePresetsReload": false,
+          "AskReConfigureInitialParams": false,
+          "AutorunCMake": false,
+          "PackageManagerAutoSetup": false,
+          "ShowAdvancedOptionsByDefault": true,
+          "ShowSourceSubfolders": true,
+          "UseJunctionsForSourceAndBuildDirectories": true,
+          "debugger": {
+            "DisplayName": "DP-GDB",
+            "Abis": [ "x86-windows-msys-pe-64bit" ],
+            "Binary": "$env{DEVSYSTEM_TOOLCHAIN_ROOT}/bin/gdb.exe",
+            "EngineType": 1,
+            "Version": "17.2"
+          }
+        }
+      }
     },
+    { "name": "qtcreator-mingw-deb", "displayName": "Qt Creator -- MinGW Shared Debug",   "inherits": "qtcreator-mingw",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "qtcreator-mingw-rel", "displayName": "Qt Creator -- MinGW Shared Release", "inherits": "qtcreator-mingw",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } },
+
     {
-      "name": "mingw-dynamic-rel",
-      "displayName": "MinGW Shared Release",
-      "inherits": "mingw",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "DEGORASKINESIS_BUILD_SHARED": "ON" }
+      "name": "unix",
+      "hidden": true,
+      "inherits": "devsystem",
+      "condition": {
+        "type": "allOf",
+        "conditions": [
+          { "type": "notEquals", "lhs": "${hostSystemName}",          "rhs": "Windows" },
+          { "type": "notEquals", "lhs": "$env{DEVSYSTEM_BUILDTREES}", "rhs": "" },
+          { "type": "notEquals", "lhs": "$env{DEVSYSTEM_DEPLOYS}",    "rhs": "" },
+          { "type": "notEquals", "lhs": "$env{VCPKG_DEFAULT_TRIPLET}","rhs": "" }
+        ]
+      },
+      "cacheVariables": { "DEGORASKINESIS_BUILD_SHARED": "ON" }
     },
-    {
-      "name": "mingw-static-deb",
-      "displayName": "MinGW Static Debug",
-      "inherits": "mingw",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "DEGORASKINESIS_BUILD_SHARED": "OFF" }
-    },
-    {
-      "name": "mingw-static-rel",
-      "displayName": "MinGW Static Release",
-      "inherits": "mingw",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "DEGORASKINESIS_BUILD_SHARED": "OFF" }
-    }
+    { "name": "unix-dynamic-deb", "displayName": "Unix Shared Debug (host toolchain)",   "inherits": "unix",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "unix-dynamic-rel", "displayName": "Unix Shared Release (host toolchain)", "inherits": "unix",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } }
   ],
+
   "buildPresets": [
-    { "name": "mingw-dynamic-deb", "configurePreset": "mingw-dynamic-deb", "verbose": true },
-    { "name": "mingw-dynamic-rel", "configurePreset": "mingw-dynamic-rel", "verbose": true },
-    { "name": "mingw-static-deb",  "configurePreset": "mingw-static-deb",  "verbose": true },
-    { "name": "mingw-static-rel",  "configurePreset": "mingw-static-rel",  "verbose": true }
+    { "name": "mingw-dynamic-deb",    "configurePreset": "mingw-dynamic-deb",    "verbose": true },
+    { "name": "mingw-dynamic-rel",    "configurePreset": "mingw-dynamic-rel",    "verbose": true },
+    { "name": "mingw-static-deb",     "configurePreset": "mingw-static-deb",     "verbose": true },
+    { "name": "mingw-static-rel",     "configurePreset": "mingw-static-rel",     "verbose": true },
+    { "name": "qtcreator-mingw-deb",  "configurePreset": "qtcreator-mingw-deb" },
+    { "name": "qtcreator-mingw-rel",  "configurePreset": "qtcreator-mingw-rel" },
+    { "name": "unix-dynamic-deb",     "configurePreset": "unix-dynamic-deb" },
+    { "name": "unix-dynamic-rel",     "configurePreset": "unix-dynamic-rel" }
+  ],
+
+  "testPresets": [
+    { "name": "mingw-dynamic-deb", "configurePreset": "mingw-dynamic-deb", "output": { "outputOnFailure": true } },
+    { "name": "mingw-dynamic-rel", "configurePreset": "mingw-dynamic-rel", "output": { "outputOnFailure": true } },
+    { "name": "unix-dynamic-deb",  "configurePreset": "unix-dynamic-deb",  "output": { "outputOnFailure": true } },
+    { "name": "unix-dynamic-rel",  "configurePreset": "unix-dynamic-rel",  "output": { "outputOnFailure": true } }
   ]
 }

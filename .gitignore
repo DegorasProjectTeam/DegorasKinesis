@@ -20,4 +20,8 @@ cmake_install.cmake
 Thumbs.db
 .DS_Store
 
-
+# Personal CMake presets. Machine-specific by definition, so never tracked -- a committed one with an
+# absolute toolchain path breaks for everyone the moment that path changes. This repository shipped one
+# naming E:/msys64/ucrt64, a drive that exists on no machine in the project, so every fresh clone got a
+# pair of presets that could not configure. Start from CMakeUserPresets.json.example.
+CMakeUserPresets.json

@@ -1,0 +1,69 @@
+{
+  "version": 6,
+  "vendor": {
+    "org.degoras.readme": {
+      "what": [
+        "PERSONAL presets. Copy to CMakeUserPresets.json (gitignored) and edit freely -- nothing here is tracked,",
+        "so it can never break anyone else's machine.",
+        "",
+        "The prose lives under 'vendor' because CMake rejects any unrecognised field in the root object, and",
+        "JSON has no comments. CMake ignores 'vendor' by design, so this is the one place it can go.",
+        "",
+        "This file exists because the repository used to SHIP a CMakeUserPresets.json naming E:/msys64/ucrt64 --",
+        "a drive present on no machine in the project. Every fresh clone therefore got two presets that could",
+        "not configure. A personal presets file is per-developer by CMake convention; tracking one poisons every",
+        "clone with another machine's layout."
+      ],
+      "when": [
+        "You do NOT need this file inside the DegorasSLR environment. The launcher exports DEVSYSTEM_TOOLCHAIN_ROOT,",
+        "DEVSYSTEM_BUILDTREES, DEVSYSTEM_DEPLOYS and VCPKG_DEFAULT_TRIPLET, which is what the generic mingw-* and",
+        "unix-* presets read: builds go to $DEVSYSTEM_BUILDTREES/DegorasKinesis/<preset> and installs to",
+        "$DEVSYSTEM_DEPLOYS/DegorasKinesis/<triplet>.",
+        "",
+        "It is for building OUTSIDE that environment. The generic presets are gated on those variables, so without",
+        "them CMake reports every preset as disabled -- and 'cmake --list-presets' comes back EMPTY -- rather than",
+        "quietly writing the build somewhere unexpected. Either export the variables yourself, or override them",
+        "here as the two examples below do.",
+        "",
+        "DEVSYSTEM_TOOLCHAIN is optional and selects the compiler DRIVER: set it to 'clang' on a clang64 prefix so",
+        "the toolchain file invokes clang.exe rather than gcc.exe. It matters because MSYS2 ships gcc.exe on",
+        "clang64 as a byte-identical copy of clang, so without it a configure log reads 'GNU' for a clang build."
+      ]
+    }
+  },
+  "configurePresets": [
+    {
+      "name": "my-mingw-dynamic-deb",
+      "displayName": "My machine -- MinGW Shared Debug",
+      "inherits": "mingw-dynamic-deb",
+      "environment": {
+        "DEVSYSTEM_TOOLCHAIN_ROOT": "C:/msys64/ucrt64",
+        "DEVSYSTEM_BUILDTREES": "C:/dev/buildtrees",
+        "DEVSYSTEM_DEPLOYS": "C:/dev/deploys",
+        "VCPKG_DEFAULT_TRIPLET": "x64-mingw-dynamic"
+      }
+    },
+    {
+      "name": "my-tree-local",
+      "displayName": "My machine -- build and install beside the sources",
+      "inherits": "mingw-dynamic-deb",
+      "binaryDir": "${sourceDir}/../build/${presetName}",
+      "installDir": "${sourceDir}/../build/${presetName}/install",
+      "environment": {
+        "DEVSYSTEM_TOOLCHAIN_ROOT": "C:/msys64/clang64",
+        "DEVSYSTEM_TOOLCHAIN": "clang",
+        "DEVSYSTEM_BUILDTREES": "unused-here-but-must-be-non-empty-to-pass-the-gate",
+        "DEVSYSTEM_DEPLOYS": "unused-here-but-must-be-non-empty-to-pass-the-gate",
+        "VCPKG_DEFAULT_TRIPLET": "x64-mingw-dynamic"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "my-mingw-dynamic-deb", "configurePreset": "my-mingw-dynamic-deb" },
+    { "name": "my-tree-local",        "configurePreset": "my-tree-local" }
+  ],
+  "testPresets": [
+    { "name": "my-mingw-dynamic-deb", "configurePreset": "my-mingw-dynamic-deb",
+      "output": { "outputOnFailure": true } }
+  ]
+}
