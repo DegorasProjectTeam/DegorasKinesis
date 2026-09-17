@@ -94,20 +94,24 @@ public:
      */
     types::OperationResult start(Producer producer,
                                  Sink sink,
-                                 std::chrono::milliseconds interval,
-                                 std::chrono::milliseconds join_timeout = std::chrono::milliseconds(2000))
+                                 types::PollInterval interval,
+                                 types::JoinTimeout join_timeout = types::JoinTimeout(std::chrono::milliseconds(2000)))
     {
         const std::lock_guard<std::mutex> lock(this->wk_mtx_);
         if (this->worker_.joinable())
             return types::OperationResult::WORKER_ALREADY_RUNNING;
 
-        this->join_timeout_ = join_timeout;
+        this->join_timeout_ = join_timeout.value;
         this->state_ = std::make_shared<State>();   // Fresh state per run; any detached worker keeps its own copy.
-        std::shared_ptr<State> st = this->state_;
+        const std::shared_ptr<State> st = this->state_;
 
         try
         {
-            this->worker_ = std::thread(&StatusPoller::run, st, std::move(producer), std::move(sink), interval);
+            // producer and sink are taken BY VALUE and moved here on purpose -- the sink-parameter idiom. A
+            // caller passing an lvalue pays one copy, a caller passing a temporary pays none, and the worker
+            // owns its own copy for its whole life. clang-tidy's performance-unnecessary-value-param flags this
+            // and is wrong: const& would force a copy INSIDE, which is strictly worse.
+            this->worker_ = std::thread(&StatusPoller::run, st, std::move(producer), std::move(sink), interval.value);
         }
         catch (...)
         {

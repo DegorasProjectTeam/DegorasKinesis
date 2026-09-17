@@ -41,8 +41,10 @@ namespace dpkin
  * @brief Poll a predicate until it becomes true or a timeout elapses.
  * @tparam Pred Callable returning something convertible to bool; true means the condition is met.
  * @param pred The condition to test. Evaluated immediately, then once per @p interval.
- * @param timeout Maximum time to wait for @p pred to become true.
- * @param interval Delay between successive evaluations of @p pred.
+ * @param timeout Maximum time to wait for @p pred to become true. A types::Timeout, not a bare milliseconds, so
+ *        it cannot be transposed with @p interval -- the two are the same underlying type and the compiler would
+ *        otherwise take them in either order without a word.
+ * @param interval Delay between successive evaluations of @p pred. A types::PollInterval, for the same reason.
  * @return OperationResult::OPERATION_OK if @p pred became true within @p timeout, otherwise
  *         OperationResult::OPERATION_TIMEOUT.
  * @note Generic deadline-poll helper that replaces the per-device, copy-pasted waitForHoming* loops. It uses a
@@ -51,15 +53,15 @@ namespace dpkin
  */
 template <class Pred>
 types::OperationResult waitForCondition(Pred pred,
-                                        std::chrono::milliseconds timeout,
-                                        std::chrono::milliseconds interval = std::chrono::milliseconds(50))
+                                        types::Timeout timeout,
+                                        types::PollInterval interval = types::PollInterval(std::chrono::milliseconds(50)))
 {
-    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + timeout;
+    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + timeout.value;
     while (!pred())
     {
         if (std::chrono::steady_clock::now() >= deadline)
             return types::OperationResult::OPERATION_TIMEOUT;
-        std::this_thread::sleep_for(interval);
+        std::this_thread::sleep_for(interval.value);
     }
     return types::OperationResult::OPERATION_OK;
 }

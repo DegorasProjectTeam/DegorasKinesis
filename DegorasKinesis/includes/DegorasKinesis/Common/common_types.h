@@ -24,6 +24,7 @@
 #pragma once
 
 // C++ INCLUDES
+#include <chrono>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -43,6 +44,44 @@ namespace types
 
 using ThorlabsSN = std::string;                  ///< Thorlabs device serial number.
 using ThorlabsSNList = std::vector<ThorlabsSN>;  ///< List of Thorlabs serial numbers.
+
+// ---------------------------------------------------------------------------------------------------------------------
+// DURATIONS THAT CANNOT BE SWAPPED
+//
+// A timeout and a poll interval are both std::chrono::milliseconds, so the compiler takes them in either order and
+// a caller who transposes them gets NO diagnostic whatsoever -- just a wait that expires immediately, or a device
+// polled once every ten seconds. On a motion-control library that failure is silent, plausible, and only shows up
+// as "the hardware feels wrong".
+//
+// It was made likelier still by the two functions that take such a pair DISAGREEING about the order:
+// waitForCondition took (timeout, interval) while StatusPoller::start took (interval, join_timeout). Anyone who
+// learned one of them was primed to get the other backwards.
+//
+// These make the transposition a COMPILE ERROR. Each is explicit, so a bare milliseconds never converts on its
+// own; each is constexpr and trivially copyable, so none of it survives to run time. Deliberately three distinct
+// types rather than one tagged template: three hand-written structs are shorter to read than the machinery that
+// would generate them, and this library has exactly three.
+
+/// @brief A maximum time to wait before giving up. Not interchangeable with PollInterval.
+struct Timeout
+{
+    constexpr explicit Timeout(std::chrono::milliseconds v) noexcept : value(v) {}
+    std::chrono::milliseconds value;
+};
+
+/// @brief The delay between two successive polls. Not interchangeable with Timeout.
+struct PollInterval
+{
+    constexpr explicit PollInterval(std::chrono::milliseconds v) noexcept : value(v) {}
+    std::chrono::milliseconds value;
+};
+
+/// @brief How long a stop() waits for its worker thread before detaching it.
+struct JoinTimeout
+{
+    constexpr explicit JoinTimeout(std::chrono::milliseconds v) noexcept : value(v) {}
+    std::chrono::milliseconds value;
+};
 
 // ---------------------------------------------------------------------------------------------------------------------
 // ENUMERATIONS

@@ -354,18 +354,38 @@ OperationResult M30XY::getDeviceStatus(M30XYDeviceStatus& status)
 
 OperationResult M30XY::waitForHomed(Channel ch, std::chrono::milliseconds timeout)
 {
+    // TWO PHASES, for the same reason waitForMoveFinished below has them: a one-phase wait cannot tell "the home
+    // has finished" from "the home has not been picked up yet", and it answers the second case with the first.
+    //
+    // MEASURED against the Kinesis Simulator. The homed flag is STILL SET from the previous home -- the device
+    // keeps it across a reconnect -- and the homing flag takes around 800 ms to rise, because it only becomes
+    // visible once the SDK's own polling refreshes its cache. A single `homed && !homing` wait is therefore
+    // already true the instant it is called: it returned OPERATION_OK in 22 ms, the caller moved on, and the
+    // move that followed landed in the middle of the real homing and was rejected by the device with
+    // "Simulator is already in motion" -- a rejection the SDK does not report back, so nothing failed loudly.
+    //
+    // The first phase is BEST-EFFORT and its result is deliberately ignored: on the simulator a home can complete
+    // faster than the cache refreshes, so the rise is never observable and this window simply expires. That costs
+    // up to one second on an already-finished home and is the price of not reporting a home that never happened.
+    const types::Timeout start_window(std::chrono::milliseconds(1000));
+    waitForCondition([this, ch]()
+    {
+        kinesis::MotorStatusFlags flags;
+        return this->getChannelFlags(ch, flags) == OperationResult::OPERATION_OK && flags.homing;
+    }, start_window);
+
     return waitForCondition([this, ch]()
     {
         kinesis::MotorStatusFlags flags;
         return this->getChannelFlags(ch, flags) == OperationResult::OPERATION_OK && flags.homed && !flags.homing;
-    }, timeout);
+    }, types::Timeout(timeout));
 }
 
 OperationResult M30XY::waitForMoveFinished(Channel ch, std::chrono::milliseconds timeout)
 {
     // Two phases so we never report "finished" before the move is even picked up: first wait (briefly, best-effort)
     // for motion to START, then wait for it to SETTLE. A move that is already complete simply settles immediately.
-    const std::chrono::milliseconds start_window(1000);
+    const types::Timeout start_window(std::chrono::milliseconds(1000));
     waitForCondition([this, ch]()
     {
         kinesis::MotorStatusFlags flags;
@@ -376,7 +396,7 @@ OperationResult M30XY::waitForMoveFinished(Channel ch, std::chrono::milliseconds
     {
         kinesis::MotorStatusFlags flags;
         return this->getChannelFlags(ch, flags) == OperationResult::OPERATION_OK && !flags.isMoving();
-    }, timeout);
+    }, types::Timeout(timeout));
 }
 
 // -- Status polling ---------------------------------------------------------------------------------------------------
@@ -403,7 +423,7 @@ OperationResult M30XY::startStatusPolling()
             cb(result, status);
     };
 
-    return this->poller_.start(producer, sink, std::chrono::milliseconds(this->poll_rate_ms_));
+    return this->poller_.start(producer, sink, types::PollInterval(std::chrono::milliseconds(this->poll_rate_ms_)));
 }
 
 OperationResult M30XY::stopStatusPolling()

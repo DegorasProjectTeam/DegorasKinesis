@@ -67,17 +67,17 @@ long long elapsedMsSince(std::chrono::steady_clock::time_point t0)
 void testWaitForCondition()
 {
     // Already-true predicate returns OK immediately.
-    assert(waitForCondition([]{ return true; }, std::chrono::milliseconds(100)) == OperationResult::OPERATION_OK);
+    assert(waitForCondition([]{ return true; }, types::Timeout(std::chrono::milliseconds(100))) == OperationResult::OPERATION_OK);
 
     // Predicate that flips true after a few polls.
     int n = 0;
     OperationResult r = waitForCondition([&]{ return ++n >= 3; },
-                                         std::chrono::milliseconds(1000), std::chrono::milliseconds(5));
+                                         types::Timeout(std::chrono::milliseconds(1000)), types::PollInterval(std::chrono::milliseconds(5)));
     assert(r == OperationResult::OPERATION_OK);
 
     // Never-true predicate times out, and at least ~timeout elapses.
     const std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
-    r = waitForCondition([]{ return false; }, std::chrono::milliseconds(120), std::chrono::milliseconds(10));
+    r = waitForCondition([]{ return false; }, types::Timeout(std::chrono::milliseconds(120)), types::PollInterval(std::chrono::milliseconds(10)));
     assert(r == OperationResult::OPERATION_TIMEOUT);
     assert(elapsedMsSince(t0) >= 100);
 }
@@ -98,9 +98,9 @@ void testPollerProduceAndDeliver()
         ++delivered;
     };
 
-    assert(poller.start(producer, sink, std::chrono::milliseconds(10)) == OperationResult::OPERATION_OK);
+    assert(poller.start(producer, sink, types::PollInterval(std::chrono::milliseconds(10))) == OperationResult::OPERATION_OK);
     assert(poller.isRunning());
-    assert(poller.start(producer, sink, std::chrono::milliseconds(10)) == OperationResult::WORKER_ALREADY_RUNNING);
+    assert(poller.start(producer, sink, types::PollInterval(std::chrono::milliseconds(10))) == OperationResult::WORKER_ALREADY_RUNNING);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(80));
 
@@ -122,7 +122,7 @@ void testPollerDeliversNonOk()
     auto producer = [&](FakeStatus&) { return OperationResult::READ_FAILED; };
     auto sink = [&](OperationResult res, const FakeStatus&) { last_res = static_cast<int>(res); };
 
-    assert(poller.start(producer, sink, std::chrono::milliseconds(5)) == OperationResult::OPERATION_OK);
+    assert(poller.start(producer, sink, types::PollInterval(std::chrono::milliseconds(5))) == OperationResult::OPERATION_OK);
     std::this_thread::sleep_for(std::chrono::milliseconds(40));
     poller.stop();
 
@@ -137,7 +137,7 @@ void testPromptCancel()
     auto sink = [&](OperationResult, const FakeStatus&) {};
 
     // Long interval: stop() must wake the worker via the condition variable, not wait the interval out.
-    assert(poller.start(producer, sink, std::chrono::seconds(5)) == OperationResult::OPERATION_OK);
+    assert(poller.start(producer, sink, types::PollInterval(std::chrono::seconds(5))) == OperationResult::OPERATION_OK);
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
     const std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
@@ -154,8 +154,8 @@ void testBoundedJoinDetach()
                                        return OperationResult::OPERATION_OK; };
     auto sink = [&](OperationResult, const FakeStatus&) {};
 
-    assert(poller.start(producer, sink, std::chrono::milliseconds(10),
-                        std::chrono::milliseconds(150)) == OperationResult::OPERATION_OK);
+    assert(poller.start(producer, sink, types::PollInterval(std::chrono::milliseconds(10)),
+                        types::JoinTimeout(std::chrono::milliseconds(150))) == OperationResult::OPERATION_OK);
     std::this_thread::sleep_for(std::chrono::milliseconds(20));   // ensure the worker is inside the blocking producer
 
     const std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
@@ -181,10 +181,10 @@ void testSelfStopFromCallback()
             poller.stop();
     };
 
-    assert(poller.start(producer, sink, std::chrono::milliseconds(10)) == OperationResult::OPERATION_OK);
+    assert(poller.start(producer, sink, types::PollInterval(std::chrono::milliseconds(10))) == OperationResult::OPERATION_OK);
 
     const OperationResult ok = waitForCondition([&]{ return stopped_from_cb.load() && !poller.isRunning(); },
-                                                std::chrono::milliseconds(1000), std::chrono::milliseconds(5));
+                                                types::Timeout(std::chrono::milliseconds(1000)), types::PollInterval(std::chrono::milliseconds(5)));
     assert(ok == OperationResult::OPERATION_OK);   // completed without hanging
 }
 
