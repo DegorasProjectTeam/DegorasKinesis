@@ -6,8 +6,16 @@
 # the first configure) and this port works unchanged.
 #
 # The library vendors the proprietary, Windows-only Thorlabs Kinesis SDK (thirdparty/Thorlabs), so this is an
-# OVERLAY / private-registry port, never an official curated one. Use a MinGW triplet (see cmake/triplets/), because
-# the public API passes C++ standard-library types across the boundary and is therefore MinGW/UCRT64-locked.
+# OVERLAY / private-registry port, never an official curated one. Use a MinGW triplet (see cmake/triplets/).
+#
+# THE CONSTRAINT IS THE C++ RUNTIME, NOT THE PREFIX. The public API passes std::string, std::vector and
+# std::function across the DLL boundary, so the consumer must be built with the SAME C++ standard library as
+# this library -- libstdc++ with libstdc++, libc++ with libc++. That is a real and unforgiving constraint, and
+# mixing them produces link errors or, worse, corruption at run time.
+#
+# It is NOT a lock to UCRT64, which is what this note used to claim. Measured: the library builds under
+# clang64/libc++ (Clang 22.1.8) with zero diagnostics and passes all nine tests against the Kinesis Simulator,
+# exactly as it does under ucrt64/libstdc++. Either prefix is fine; what must not differ is the pairing.
 
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH

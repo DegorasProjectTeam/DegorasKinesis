@@ -6,7 +6,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 # Project name.
-project(DegorasKinesis VERSION 0.0.1 LANGUAGES C CXX)
+project(DegorasKinesis VERSION 0.1.0 LANGUAGES C CXX)
 
 # Set cmake policy.
 if(COMMAND cmake_policy)

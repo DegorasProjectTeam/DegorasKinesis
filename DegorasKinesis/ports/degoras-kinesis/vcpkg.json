@@ -1,6 +1,6 @@
 {
   "name": "degoras-kinesis",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Extensible C++17 library for controlling Thorlabs Kinesis motion devices (M30X, M30XY, K10CR2).",
   "homepage": "https://github.com/DegorasProjectTeam/DegorasKinesis",
   "license": "GPL-3.0-or-later",
