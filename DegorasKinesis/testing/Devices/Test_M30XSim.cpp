@@ -63,6 +63,11 @@ using dpkin::types::StopMode;
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Usage: Test_M30XSim [serial]   (serial defaults to the first discovered M30X, e.g. sim 105000002).
+// EXIT CODE FOR A SELF-SKIP. 77 is the GNU Automake convention CTest adopts via SKIP_RETURN_CODE; returning 0
+// here is what let a suite with the simulator stopped report "100% tests passed, 9 of 9" while three of those
+// nine had run nothing at all. Declared once so no skip path can drift back to 0.
+constexpr int kSkipExitCode = 77;
+
 int main(int argc, char** argv)
 {
     using namespace std::chrono;
@@ -72,7 +77,7 @@ int main(int argc, char** argv)
     if (!sim.usable())
     {
         std::cout << "SKIP: Kinesis simulator not available.\n";
-        return 0;
+        return kSkipExitCode;
     }
 
     types::ThorlabsSNList list;
@@ -86,7 +91,7 @@ int main(int argc, char** argv)
         if (!M30X::isCompatibleSerial(serial))
         {
             std::cout << "SKIP: serial '" << serial << "' is not an M30X (type 105).\n";
-            return 0;
+            return kSkipExitCode;
         }
     }
     else if (!list.empty())
@@ -96,7 +101,7 @@ int main(int argc, char** argv)
     else
     {
         std::cout << "SKIP: no virtual M30X (type 105) configured in the simulator.\n";
-        return 0;
+        return kSkipExitCode;
     }
     std::cout << "using M30X serial: " << serial << "\n";
 

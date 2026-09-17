@@ -39,6 +39,7 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include <iostream>
 
 // PROJECT INCLUDES
@@ -55,15 +56,29 @@ using dpkin::types::StopMode;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // LIVE simulator self-check for the M30XY device (milestone M5). Requires the Thorlabs Kinesis Simulator running with
-// a virtual M30XY (type 101). Self-skips (exit 0) when absent.
+// a virtual M30XY (type 101). Self-skips (exit 77) when absent.
 //
 // SCOPE: validates the full SDK-integration CONTRACT through the real vendor DLL (discovery, connect, idempotent
-// reconnect, enable, home command, status read + decode of both channels, async status callback, disconnect). It does
-// NOT assert physical position, because the simulator's virtual stages cannot be assigned a travel range; the commanded
-// position is logged instead. On real hardware the logged position should reach the commanded target.
+// reconnect, enable, home, MOTION AND ITS RESULTING POSITION, status read + decode of both channels, async status
+// callback, disconnect).
+//
+// THE POSITION IS ASSERTED, not merely logged. It used to be logged, on the stated grounds that "the simulator's
+// virtual stages cannot be assigned a travel range" -- which is no longer true, and the cost of not checking was
+// concrete: with the move commanded 22 ms after the home it was silently rejected by the device, the axis never
+// left zero, and this test still printed ALL CHECKS PASSED. Measured on the simulator, an axis that is left to
+// finish homing first reaches 5.0000 mm exactly (50000 device units, 10000 per mm).
+//
+// WAITING FOR THE HOME IS PART OF THE CONTRACT BEING TESTED, so it is done through the library's own
+// waitForHomed rather than a sleep: if that function ever stops waiting, this test must fail rather than paper
+// over it with a delay that happens to be long enough.
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Usage: Test_M30XYSim [serial]   (serial defaults to the first discovered M30XY, e.g. sim 101000002).
+// EXIT CODE FOR A SELF-SKIP. 77 is the GNU Automake convention CTest adopts via SKIP_RETURN_CODE; returning 0
+// here is what let a suite with the simulator stopped report "100% tests passed, 9 of 9" while three of those
+// nine had run nothing at all. Declared once so no skip path can drift back to 0.
+constexpr int kSkipExitCode = 77;
+
 int main(int argc, char** argv)
 {
     using namespace std::chrono;
@@ -73,7 +88,7 @@ int main(int argc, char** argv)
     if (!sim.usable())
     {
         std::cout << "SKIP: Kinesis simulator not available.\n";
-        return 0;
+        return kSkipExitCode;
     }
 
     types::ThorlabsSNList list;
@@ -87,7 +102,7 @@ int main(int argc, char** argv)
         if (!M30XY::isCompatibleSerial(serial))
         {
             std::cout << "SKIP: serial '" << serial << "' is not an M30XY (type 101).\n";
-            return 0;
+            return kSkipExitCode;
         }
     }
     else if (!list.empty())
@@ -97,7 +112,7 @@ int main(int argc, char** argv)
     else
     {
         std::cout << "SKIP: no virtual M30XY (type 101) configured in the simulator.\n";
-        return 0;
+        return kSkipExitCode;
     }
     std::cout << "using M30XY serial: " << serial << "\n";
 
@@ -122,12 +137,24 @@ int main(int argc, char** argv)
     std::cout << "homed flags (sim-dependent): X=" << status.chann_x.flags.homed
               << " Y=" << status.chann_y.flags.homed << "\n";
 
-    // Motion command contract (physical translation is sim-dependent; position is logged, not asserted).
-    assert(dev.doMoveAbsolute(Channel::X_CHANNEL, 5.0) == OperationResult::OPERATION_OK);
-    dev.waitForMoveFinished(Channel::X_CHANNEL, seconds(10));
+    // THE HOME MUST FINISH BEFORE THE MOVE IS COMMANDED. A device that is still homing discards the move, and
+    // the SDK does not report that back -- doMoveAbsolute still returns OPERATION_OK. So the only way this
+    // failure can ever be caught is by asserting the position afterwards, which is what happens below.
+    assert(dev.waitForHomed(Channel::X_CHANNEL, seconds(30)) == OperationResult::OPERATION_OK);
+    assert(dev.waitForHomed(Channel::Y_CHANNEL, seconds(30)) == OperationResult::OPERATION_OK);
+
+    // Motion contract: the axis must actually ARRIVE, not merely accept the command.
+    constexpr double kTargetMm = 5.0;
+    constexpr double kToleranceMm = 0.05;
+
+    assert(dev.doMoveAbsolute(Channel::X_CHANNEL, kTargetMm) == OperationResult::OPERATION_OK);
+    assert(dev.waitForMoveFinished(Channel::X_CHANNEL, seconds(30)) == OperationResult::OPERATION_OK);
+
     double x_mm = 0.0;
-    dev.getChannelPosition(Channel::X_CHANNEL, x_mm);
-    std::cout << "X position after move-to-5mm command: " << x_mm << " mm (target reached only with a real stage)\n";
+    assert(dev.getChannelPosition(Channel::X_CHANNEL, x_mm) == OperationResult::OPERATION_OK);
+    std::cout << "X position after move-to-5mm: " << x_mm << " mm (target " << kTargetMm
+              << " mm, tolerance " << kToleranceMm << " mm)\n";
+    assert(std::fabs(x_mm - kTargetMm) <= kToleranceMm);
     assert(dev.doStopAll(StopMode::PROFILED) == OperationResult::OPERATION_OK);
 
     // Async status callback contract: a callback arrives with a valid status while polling.
@@ -139,7 +166,7 @@ int main(int argc, char** argv)
     });
     assert(dev.startStatusPolling() == OperationResult::OPERATION_OK);
     assert(dev.isStatusPollingRunning());
-    assert(waitForCondition([&]{ return cb_ok.load() >= 1; }, seconds(5), milliseconds(50))
+    assert(waitForCondition([&]{ return cb_ok.load() >= 1; }, types::Timeout(seconds(5)), types::PollInterval(milliseconds(50)))
            == OperationResult::OPERATION_OK);
     assert(dev.stopStatusPolling() == OperationResult::OPERATION_OK);
     assert(!dev.isStatusPollingRunning());

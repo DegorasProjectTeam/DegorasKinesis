@@ -12,6 +12,12 @@ foreach(test_src ${THORLABS_KINESIS_TESTS})
     # Register with CTest, except the long-running monitor and the hardware-gated test.
     if(NOT test_name MATCHES "Monitor|Hardware")
         add_test(NAME ${test_name} COMMAND ${test_name})
+
+        # A TEST THAT SKIPS ITSELF MUST NOT REPORT A PASS. These tests exit 0 when no device or simulator is
+        # present, and without this CTest cannot tell that apart from success: with the simulator stopped the
+        # suite reported "100% tests passed, 9 of 9" in 0.73 s, three of which had run nothing at all. Exit
+        # code 77 is the GNU Automake convention CTest adopts for "skipped".
+        set_tests_properties(${test_name} PROPERTIES SKIP_RETURN_CODE 77)
     endif()
 endforeach()
 

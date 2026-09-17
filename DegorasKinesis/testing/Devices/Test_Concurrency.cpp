@@ -66,6 +66,11 @@ using dpkin::types::OperationResult;
 //       not depend on that device having a settings profile.
 // ---------------------------------------------------------------------------------------------------------------------
 
+// EXIT CODE FOR A SELF-SKIP. 77 is the GNU Automake convention CTest adopts via SKIP_RETURN_CODE; returning 0
+// here is what let a suite with the simulator stopped report "100% tests passed, 9 of 9" while three of those
+// nine had run nothing at all. Declared once so no skip path can drift back to 0.
+constexpr int kSkipExitCode = 77;
+
 int main()
 {
     using namespace std::chrono;
@@ -75,7 +80,7 @@ int main()
     if (!sim.usable())
     {
         std::cout << "SKIP: Kinesis simulator not available.\n";
-        return 0;
+        return kSkipExitCode;
     }
 
     types::ThorlabsSNList xy;
@@ -83,7 +88,7 @@ int main()
     if (xy.empty())
     {
         std::cout << "SKIP: no virtual M30XY (type 101) in the simulator.\n";
-        return 0;
+        return kSkipExitCode;
     }
 
     // (1) Aliasing on the same serial.

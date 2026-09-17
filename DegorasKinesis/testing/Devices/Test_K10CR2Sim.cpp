@@ -63,6 +63,11 @@ using dpkin::types::StopMode;
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Usage: Test_K10CR2Sim [serial]   (serial defaults to the first discovered K10CR2, e.g. sim 55000002).
+// EXIT CODE FOR A SELF-SKIP. 77 is the GNU Automake convention CTest adopts via SKIP_RETURN_CODE; returning 0
+// here is what let a suite with the simulator stopped report "100% tests passed, 9 of 9" while three of those
+// nine had run nothing at all. Declared once so no skip path can drift back to 0.
+constexpr int kSkipExitCode = 77;
+
 int main(int argc, char** argv)
 {
     using namespace std::chrono;
@@ -72,7 +77,7 @@ int main(int argc, char** argv)
     if (!sim.usable())
     {
         std::cout << "SKIP: Kinesis simulator not available.\n";
-        return 0;
+        return kSkipExitCode;
     }
 
     types::ThorlabsSNList list;
@@ -86,7 +91,7 @@ int main(int argc, char** argv)
         if (!K10CR2::isCompatibleSerial(serial))
         {
             std::cout << "SKIP: serial '" << serial << "' is not a K10CR2 (type 55).\n";
-            return 0;
+            return kSkipExitCode;
         }
     }
     else if (!list.empty())
@@ -96,7 +101,7 @@ int main(int argc, char** argv)
     else
     {
         std::cout << "SKIP: no virtual K10CR2 (type 55) configured in the simulator.\n";
-        return 0;
+        return kSkipExitCode;
     }
     std::cout << "using K10CR2 serial: " << serial << "\n";
 
