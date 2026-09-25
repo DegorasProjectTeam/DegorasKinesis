@@ -112,6 +112,15 @@ OperationResult M30XY::doConnect(const DeviceConfig& cfg)
 
     // LoadSettings failure is NON-FATAL (see K10CR2/M30X): each axis still works in device units; only
     // real-world-unit (mm) conversion needs a loaded stage/settings profile.
+    //
+    // EVERY CHANNEL'S SETTINGS ARE LOADED BEFORE ANY CHANNEL STARTS POLLING. Both channels live on ONE controller
+    // object inside the Thorlabs DLL (CIntegratedXYStageCtrl), and the loop used to interleave them: load X, poll X,
+    // load Y. Loading Y's settings while X's SDK polling thread was already running on the same controller failed
+    // intermittently -- measured against the Kinesis Simulator at 3 runs in 40 of Test_M30XYSim: two SEGFAULTs within
+    // the first second, and one hang with the main thread spinning at 100% CPU inside
+    // CKCubeDCAdvancedMotorLimits::CreateDeviceUnitConverter, reached from BDC_LoadSettings for channel Y (i == 1),
+    // while a Thorlabs worker thread sat in the device-settings XML cache. Load everything first, then poll: an order
+    // in which no settings load can overlap a polling thread on the shared controller.
     this->units_ready_ = true;
     for (std::size_t i = 0; i < this->chans_.size(); ++i)
     {
@@ -119,7 +128,10 @@ OperationResult M30XY::doConnect(const DeviceConfig& cfg)
 
         if (!this->chans_[i].loadSettings(settings).ok())
             this->units_ready_ = false;
+    }
 
+    for (std::size_t i = 0; i < this->chans_.size(); ++i)
+    {
         err = this->chans_[i].startPolling(this->poll_rate_ms_);
         if (!err.ok())
         {
