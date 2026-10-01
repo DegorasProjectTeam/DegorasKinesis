@@ -1,6 +1,6 @@
 # Overlay port for DegorasKinesis.
 #
-# REF and SHA512 are REAL as of v0.1.0: the tag exists and the hash below is of the archive GitHub generated for
+# REF and SHA512 are REAL as of v0.2.0: the tag exists and the hash below is of the archive GitHub generated for
 # it. Both must move together on every release -- REF follows ${VERSION} from vcpkg.json, and the hash has to be
 # recomputed afterwards, because GitHub cannot produce the archive until the tag is pushed. Getting one without
 # the other is the failure this port shipped with until now: SHA512 0 against a tag that did not exist.
@@ -23,7 +23,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO DegorasProjectTeam/DegorasKinesis
     REF "v${VERSION}"
-    SHA512 c86fcb9221ac853ee1607de85d8dd3a963f3ced1070ef34af1f015e04d0f9cac5d76a882c315ec68e07a9eaa1d7caef573853b5d8b525c9f09c556e8b65a6741
+    SHA512 9de9936b568d19aabc0ae15208a65229617dc839f90eaf8b16e30f58213c72926d748e865896e8200f19633aa28e5fb71ff70586e75ce99735abdfd1aea76baf
     HEAD_REF main
 )
 
