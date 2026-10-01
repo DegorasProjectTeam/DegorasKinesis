@@ -297,7 +297,10 @@ OperationResult M30XY::getChannelFlags(Channel ch, kinesis::MotorStatusFlags& fl
 
 bool M30XY::hasRealUnits() const
 {
-    return this->units_ready_;
+    // Only while THIS object holds the device open. units_ready_ is set by doConnect and nothing clears it, so on
+    // its own it went on answering true after doDisconnect -- harmless while only this class read it, but not a
+    // contract IMotionDevice can publish.
+    return this->i_own_open_ && this->units_ready_;
 }
 
 OperationResult M30XY::doMoveAbsoluteDeviceUnits(Channel ch, int device_units)

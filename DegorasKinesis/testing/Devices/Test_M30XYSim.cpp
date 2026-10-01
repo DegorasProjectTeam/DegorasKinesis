@@ -120,9 +120,14 @@ int main(int argc, char** argv)
     assert(dev.getChannelCount() == 2);
     assert(!dev.isConnected());
 
+    // THROUGH THE INTERFACE (0.2.0): what a consumer holding only IMotionDevice sees. No real units before a connect.
+    const IMotionDevice& idev = dev;
+    assert(!idev.hasRealUnits());
+
     // Lifecycle contract.
     assert(dev.doConnect() == OperationResult::OPERATION_OK);
     assert(dev.isConnected());
+    assert(idev.hasRealUnits());      // the millimetre moves below depend on it
     assert(dev.doConnect() == OperationResult::ALREADY_CONNECTED);
 
     // Command contract: enable + home both axes succeed.
@@ -174,6 +179,10 @@ int main(int argc, char** argv)
     // Teardown contract.
     assert(dev.doDisconnect() == OperationResult::OPERATION_OK);
     assert(!dev.isConnected());
+
+    // ...and none after a disconnect. units_ready_ used to survive doDisconnect, so this answered true for a
+    // device that was no longer open -- not a contract IMotionDevice can publish.
+    assert(!idev.hasRealUnits());
 
     std::cout << "Test_M30XYSim: ALL CHECKS PASSED" << std::endl;
     return 0;

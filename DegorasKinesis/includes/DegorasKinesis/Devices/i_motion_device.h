@@ -97,6 +97,18 @@ public:
     virtual bool isConnected() const = 0;
 
     /**
+     * @brief Whether real-world-unit operations are available: this object holds the device open AND a
+     *        stage/settings profile is loaded for every channel.
+     * @note On a CONNECTED device, false means doMoveAbsolute, doMoveRelative and getChannelPosition answer
+     *       LOAD_SETTINGS_ERROR: drive it in device units instead. A consumer holding only this interface can ask,
+     *       rather than infer it from the result of a read or cast back to the concrete device class. Also false
+     *       before doConnect and after doDisconnect, when no millimetre operation is meaningful at all; a simulated
+     *       stage with no profile assigned is the usual case of a connected device without real units.
+     * @since 0.2.0
+     */
+    virtual bool hasRealUnits() const = 0;
+
+    /**
      * @brief Open and initialise the device. Idempotent for the object that owns the connection.
      * @param cfg Optional per-channel named settings and polling rate.
      * @return OPERATION_OK on success; ALREADY_CONNECTED if this object already owns it; SERIAL_IN_USE if another

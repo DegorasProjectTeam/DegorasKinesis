@@ -100,7 +100,7 @@ public:
     ///        available. When false (e.g. a simulated device with no profile assigned) the real-world-unit methods
     ///        (doMoveAbsolute/doMoveRelative/getChannelPosition) return OperationResult::LOAD_SETTINGS_ERROR; drive
     ///        and read the stage with the device-unit methods below (raw motor counts) instead.
-    bool hasRealUnits() const;
+    bool hasRealUnits() const override;
     /// @brief Absolute move to a raw device-unit (motor count) position. Works without a profile. Non-blocking.
     types::OperationResult doMoveAbsoluteDeviceUnits(types::Channel ch, int device_units);
     /// @brief Relative move by a raw device-unit (motor count) displacement. Works without a profile. Non-blocking.

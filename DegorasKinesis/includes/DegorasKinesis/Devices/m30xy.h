@@ -99,7 +99,7 @@ public:
     /// @brief Whether a stage/settings profile is loaded, i.e. whether real-world-unit (mm) operations are available.
     ///        When false the real-world-unit methods (doMoveAbsolute/doMoveRelative/getChannelPosition) return
     ///        OperationResult::LOAD_SETTINGS_ERROR; drive and read the stage with the device-unit methods below.
-    bool hasRealUnits() const;
+    bool hasRealUnits() const override;
     /// @brief Absolute move to a raw device-unit (motor count) position. Works without a profile. Non-blocking.
     types::OperationResult doMoveAbsoluteDeviceUnits(types::Channel ch, int device_units);
     /// @brief Relative move by a raw device-unit (motor count) displacement. Works without a profile. Non-blocking.

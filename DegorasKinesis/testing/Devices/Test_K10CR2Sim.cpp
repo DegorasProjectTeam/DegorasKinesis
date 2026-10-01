@@ -109,6 +109,10 @@ int main(int argc, char** argv)
     assert(dev.getChannelCount() == 1);
     assert(!dev.isConnected());
 
+    // THROUGH THE INTERFACE (0.2.0): what a consumer holding only IMotionDevice sees. No real units before a connect.
+    const IMotionDevice& idev = dev;
+    assert(!idev.hasRealUnits());
+
     // Channel validation is checked before any device I/O, so it works without a connection (single axis only).
     assert(dev.doMoveAbsoluteDeviceUnits(Channel::Y_CHANNEL, 1000) == OperationResult::INVALID_CHANNEL);
     {
@@ -168,6 +172,10 @@ int main(int argc, char** argv)
     assert(dev.doStop(Channel::X_CHANNEL, StopMode::PROFILED) == OperationResult::OPERATION_OK);
     assert(dev.doDisconnect() == OperationResult::OPERATION_OK);
     assert(!dev.isConnected());
+
+    // ...and none after a disconnect. units_ready_ used to survive doDisconnect, so this answered true for a
+    // device that was no longer open -- not a contract IMotionDevice can publish.
+    assert(!idev.hasRealUnits());
 
     std::cout << "Test_K10CR2Sim: ALL CHECKS PASSED" << std::endl;
     return 0;
